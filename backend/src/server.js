@@ -6,7 +6,7 @@ import usuarioRouter from "./routers/usuario_routes.js";
 import gruposRouter from "./routers/grupos_routes.js";
 import adminRoutes from './routers/admin_routes.js';
 import automatizacionRouter from "./routers/automatizacion_routes.js";
-import postsRouter from "./routers/posts.routes.js";
+import postsRouter from "./routers/posts_routes.js";
 import chatRouter from "./routers/chat_routes.js";
 import eventosRouter from "./routers/eventos_routes.js";
 import recomendacionesRouter from "./routers/recomendaciones_routes.js";
