@@ -80,7 +80,7 @@ const translateToSpanish = async (text) => {
 
 const BLACKLISTED_DOMAINS = [
     "hotmail.com", "outlook.com", "yahoo.com",
-    "aol.com", "live.com", "icloud.com", "mail.com"
+    "aol.com", "live.com", "icloud.com", "mail.com", "gmail.com"
 ];
 
 const domainCheck = (req, res, next) => {
