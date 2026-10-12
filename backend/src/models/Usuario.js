@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 const usuarioSchema = new mongoose.Schema({
   nombre: { type: String, required: true },
   apellido: { type: String },
-  correoInstitucional: { type: String, required: true, unique: true },
+  correoInstitucional: { type: String, required: true, unique: true, lowercase: true,trim: true, match: /@epn\.edu\.ec$/i },
   password: { type: String, required: true },
   rol: { type: String, default: "estudiante" },
   token: { type: String, default: null },
