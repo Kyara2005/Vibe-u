@@ -37,8 +37,19 @@
 .section-title {
     text-align: center;
     color: #f9f7fc;
-    font-size: 2.5rem;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
     margin-bottom: 1.5rem;
+    padding: 0 12px;
+}
+
+@media (max-width: 768px) {
+    .funcionalidades {
+        padding: 1.5rem 0.85rem;
+    }
+    .funcionalidades__grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 }
 
 [data-theme="dark"] .funcionalidad__item {

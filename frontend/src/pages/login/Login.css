@@ -6,11 +6,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    min-height: 100dvh;
     background-color: #0d0d2b;
-    padding: 20px;
+    padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 /* ===============================
@@ -73,11 +73,11 @@
 
 /* INPUT GENERAL */
 .input-group input {
-    width: 93%;
+    width: 100%;
     padding: 15px;
     border: 2px solid #e0e0e0;
     border-radius: 10px;
-    font-size: 1em;
+    font-size: 16px;
     transition: all 0.3s ease;
 }
 
@@ -182,19 +182,20 @@
 ================================ */
 .back-btn {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 60px;
-    height: 60px;
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    width: 44px;
+    height: 44px;
     background: rgba(0, 0, 0, 0.92);
     color: #fff;
-    border-radius: 60%;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 40px;
+    font-size: 24px;
     text-decoration: none;
     transition: all 0.3s ease;
+    z-index: 5;
 }
 
 .back-btn:hover {
@@ -243,8 +244,19 @@
 /* ===============================
    RESPONSIVE
 ================================ */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
+    .login-container {
+        align-items: flex-start;
+        padding-top: max(64px, calc(env(safe-area-inset-top) + 52px));
+    }
     .login-card {
-        padding: 30px 20px;
+        padding: 28px 18px;
+        width: 100%;
+    }
+    .login-title {
+        font-size: 1.7em;
+    }
+    .login-subtitle {
+        overflow-wrap: anywhere;
     }
 }

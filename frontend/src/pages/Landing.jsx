@@ -7,13 +7,11 @@ import Header from "../components/header/Header"
 import HowItWorks from "../components/how/HowItWorks"
 import ProblemSolution from "../components/problemSolution/ProblemSolution"
 import Descarga from "../components/descarga/Descarga"
-import ThemeToggle from "../components/theme/ThemeToggle"
 
 
 const Landing = () => {
     return (
         <>
-            <ThemeToggle />
             <div data-aos="fade-down">
                 <Header />
             </div>

@@ -1,128 +1,229 @@
 .gauto-container {
-    padding: 2rem;
-    color: #fff;
+    padding: 20px 16px 28px;
+    background: #f4e9ff;
+    border-radius: 18px;
+    color: #2d1b4e;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+.gauto-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.gauto-kicker {
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #7c3aed;
 }
 
 .gauto-container h2 {
-    margin-bottom: 1.5rem;
+    margin: 0;
+    font-size: 1.45rem;
+    color: #2d1b4e;
 }
 
-.gauto-table-wrap {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 1.5rem;
-}
-
-.gauto-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.gauto-table th,
-.gauto-table td {
-    border: 1px solid #444;
-    padding: 0.75rem;
-    text-align: center;
-    word-break: break-word;
-}
-
-.gauto-table th {
-    background-color: #222;
-}
-
-.gauto-table tr:nth-child(even) {
-    background-color: #1a1a1a;
-}
-
-.gauto-empty {
-    text-align: center;
-    color: #aaa;
-    padding: 1.5rem;
+.gauto-lead {
+    margin: 6px 0 0;
+    color: #6b5288;
+    max-width: 46ch;
 }
 
 .gauto-btn {
-    background-color: #7c3aed;
-    color: white;
+    background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%);
+    color: #fff;
     border: none;
-    padding: 0.7rem 1.5rem;
-    border-radius: 8px;
+    padding: 0.75rem 1.2rem;
+    border-radius: 12px;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
+    min-height: 44px;
 }
 
 .gauto-btn:disabled {
-    background-color: #555;
+    opacity: 0.65;
     cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
+.gauto-error {
+    color: #b91c1c;
+    margin: 0 0 12px;
+    font-weight: 600;
+}
+
+.gauto-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.gauto-summary article {
+    background: #fff;
+    border: 1px solid #eadfff;
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+}
+
+.gauto-summary strong {
+    display: block;
+    font-size: 1.4rem;
+    color: #6d28d9;
+    line-height: 1.1;
+}
+
+.gauto-summary span {
+    color: #6b5288;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.gauto-empty-card,
+.gauto-card {
+    background: #fff;
+    border: 1px solid #eadfff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(88, 28, 135, 0.08);
+}
+
+.gauto-empty-card {
+    text-align: left;
+    margin-bottom: 12px;
+}
+
+.gauto-empty-card strong,
+.gauto-card h3 {
+    display: block;
+    margin: 0 0 10px;
+    color: #2d1b4e;
+}
+
+.gauto-empty-card p {
+    margin: 0;
+    color: #6b5288;
+}
+
+.gauto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.gauto-card h3 {
+    font-size: 1.08rem;
+    word-break: break-word;
+}
+
+.gauto-rows {
+    margin: 0;
+    display: grid;
+    gap: 8px;
+}
+
+.gauto-rows > div {
+    display: grid;
+    grid-template-columns: 118px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    background: #faf5ff;
+    border: 1px solid #f0e4ff;
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+.gauto-rows dt {
+    margin: 0;
+    color: #7c3aed;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.gauto-rows dd {
+    margin: 0;
+    color: #1f2937;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+@media (max-width: 770px) {
     .gauto-container {
-        padding: 1rem;
+        padding: 12px 8px 20px;
+        border-radius: 0;
     }
 
-    .gauto-container h2 {
-        font-size: 1.2rem;
-        line-height: 1.3;
-        margin-bottom: 1rem;
-    }
-
-    .gauto-table {
-        border: 0;
-        min-width: 100%;
-    }
-
-    .gauto-table thead {
-        border: 0;
-        clip: rect(0 0 0 0);
-        height: 1px;
-        margin: -1px;
-        overflow: hidden;
-        padding: 0;
-        position: absolute;
-        width: 1px;
-    }
-
-    .gauto-table tr {
-        display: block;
-        margin-bottom: 0.85rem;
-        border: 1px solid #333;
-        border-radius: 10px;
-        background-color: #161616;
-    }
-
-    .gauto-table td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        text-align: right;
-        border: 0;
-        border-bottom: 1px solid #2f2f2f;
-        padding: 0.75rem 0.85rem;
-        font-size: 0.92rem;
-        gap: 0.75rem;
-    }
-
-    .gauto-table td:last-child {
-        border-bottom: 0;
-    }
-
-    .gauto-table td::before {
-        content: attr(data-label);
-        font-weight: 700;
-        color: #d1d5db;
-        text-align: left;
-        min-width: 44%;
-    }
-
-    .gauto-empty {
-        display: block;
-        text-align: center;
-        padding: 1rem;
+    .gauto-head {
+        flex-direction: column;
     }
 
     .gauto-btn {
         width: 100%;
-        min-height: 44px;
     }
+
+    .gauto-summary,
+    .gauto-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .gauto-rows > div {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
+
+[data-theme="dark"] .gauto-container {
+    background: #121826;
+    color: #f3eeff;
+}
+
+[data-theme="dark"] .gauto-container h2,
+[data-theme="dark"] .gauto-card h3,
+[data-theme="dark"] .gauto-empty-card strong {
+    color: #f3eeff;
+}
+
+[data-theme="dark"] .gauto-lead,
+[data-theme="dark"] .gauto-empty-card p,
+[data-theme="dark"] .gauto-summary span {
+    color: #c4b5e8;
+}
+
+[data-theme="dark"] .gauto-empty-card,
+[data-theme="dark"] .gauto-card,
+[data-theme="dark"] .gauto-summary article {
+    background: #1b1533;
+    border-color: #3d3168;
+    box-shadow: none;
+}
+
+[data-theme="dark"] .gauto-rows > div {
+    background: #241b42;
+    border-color: #3d3168;
+}
+
+[data-theme="dark"] .gauto-rows dt {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .gauto-rows dd,
+[data-theme="dark"] .gauto-summary strong {
+    color: #f8f3ff;
+}
+
+[data-theme="dark"] .gauto-kicker {
+    color: #c4b5fd;
 }

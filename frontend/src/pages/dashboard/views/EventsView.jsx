@@ -7,12 +7,20 @@ import {
   updateUniversityEvent,
 } from "../../../Services/events";
 import { getTokenPayload } from "../../../utils/authToken";
+import InterestChips from "../../../components/interests/InterestChips";
+import { sanitizeInterests } from "../../../utils/interests";
 
 const formatDate = (value) => {
   if (!value) return "Fecha no disponible";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Fecha no disponible";
   return date.toLocaleString();
+};
+
+const isEventExpired = (value, now = Date.now()) => {
+  if (!value) return true;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) || date.getTime() < now;
 };
 
 const emptyForm = {
@@ -22,6 +30,7 @@ const emptyForm = {
   lugar: "",
   descripcionEvento: "",
   costo: "",
+  tags: [],
 };
 
 const toDateTimeLocalValue = (value) => {
@@ -44,13 +53,35 @@ const EventsView = () => {
   const [editingEventId, setEditingEventId] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [coverPreview, setCoverPreview] = useState("");
+  const [now, setNow] = useState(() => Date.now());
   const token = localStorage.getItem("token");
   const currentUserId = getTokenPayload(token)?.id || "";
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const sortedEvents = useMemo(
-    () => [...events].sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora)),
-    [events]
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const id = setInterval(tick, 15000);
+    window.addEventListener("focus", tick);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", tick);
+    };
+  }, []);
+
+  const upcomingEvents = useMemo(
+    () =>
+      [...events]
+        .filter((event) => !isEventExpired(event.fechaHora, now))
+        .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora)),
+    [events, now]
+  );
+
+  const pastEvents = useMemo(
+    () =>
+      [...events]
+        .filter((event) => isEventExpired(event.fechaHora, now))
+        .sort((a, b) => new Date(b.fechaHora) - new Date(a.fechaHora)),
+    [events, now]
   );
 
   const loadEvents = async () => {
@@ -76,6 +107,15 @@ const EventsView = () => {
   useEffect(() => {
     loadEvents();
   }, []);
+
+  useEffect(() => {
+    const selectedId = sessionStorage.getItem("vibeSelectedEventId");
+    if (!selectedId || !events.length) return;
+    const found = events.find((event) => event._id === selectedId);
+    if (!found) return;
+    setSelectedEvent(found);
+    sessionStorage.removeItem("vibeSelectedEventId");
+  }, [events]);
 
   const handleCreateEvent = async (e) => {
     e.preventDefault();
@@ -124,6 +164,11 @@ const EventsView = () => {
 
   const handleAttend = async (eventId, e) => {
     e.stopPropagation();
+    const target = events.find((item) => item._id === eventId);
+    if (target && isEventExpired(target.fechaHora, now)) {
+      setError("Este evento ya caducó y no admite asistencia.");
+      return;
+    }
     try {
       setError("");
       const res = await toggleAttendEvent(eventId);
@@ -161,10 +206,80 @@ const EventsView = () => {
       lugar: event.lugar || "",
       descripcionEvento: event.descripcionEvento || "",
       costo: event.costo || "",
+      tags: sanitizeInterests(event.tags),
     });
     setCoverPreview(event.portada || "");
     setShowCreateModal(true);
   };
+
+  const renderEventCard = (event, expired) => (
+    <article
+      key={event._id}
+      className={`event_card__dash event_card_clickable__dash${expired ? " event_card_expired__dash" : ""}`}
+      onClick={() => {
+        setOpenMenuEventId(null);
+        setSelectedEvent(event);
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") setSelectedEvent(event);
+      }}
+    >
+      <div className="event_card_body_custom__dash">
+        <div className="event_card_main_custom__dash">
+          {event?.creador?._id === currentUserId ? (
+            <div
+              className="event_menu_wrap__dash"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className="event_menu_btn__dash"
+                type="button"
+                aria-label="Opciones del evento"
+                title="Opciones"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenMenuEventId((prev) => (prev === event._id ? null : event._id));
+                }}
+              >
+                ⋮
+              </button>
+              {openMenuEventId === event._id ? (
+                <div className="event_menu_panel__dash">
+                  <button type="button" onClick={(e) => handleEditEvent(event, e)}>
+                    Editar
+                  </button>
+                  <button type="button" onClick={(e) => handleDeleteEvent(event._id, e)}>
+                    Eliminar
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {expired ? <span className="event_expired_badge__dash">Caducado</span> : null}
+          <h4>{event.nombreEvento}</h4>
+          <p>{formatDate(event.fechaHora)}</p>
+          <p>{event.lugar}</p>
+          <p>Asistentes: {event.asistentesCount || 0}</p>
+          {expired ? (
+            <p className="event_expired_text__dash">Este evento ya pasó. Ya no puedes asistir.</p>
+          ) : (
+            <button
+              className="button__dash"
+              type="button"
+              onClick={(e) => handleAttend(event._id, e)}
+            >
+              {event.isAttending ? "Ya asistiré" : "Asistiré"}
+            </button>
+          )}
+        </div>
+        {event.portada ? (
+          <img className="event_cover_custom__dash" src={event.portada} alt={`Portada de ${event.nombreEvento}`} />
+        ) : null}
+      </div>
+    </article>
+  );
 
   return (
     <section className="panel__dash">
@@ -187,76 +302,28 @@ const EventsView = () => {
       {loading ? (
         <p className="chat_hint__dash">Cargando eventos...</p>
       ) : (
-        <div className="events_grid__dash events_custom_grid__dash">
-          {sortedEvents.map((event) => (
-            <article
-              key={event._id}
-              className="event_card__dash event_card_clickable__dash"
-              onClick={() => {
-                setOpenMenuEventId(null);
-                setSelectedEvent(event);
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") setSelectedEvent(event);
-              }}
-            >
-              <div className="event_card_body_custom__dash">
-                <div className="event_card_main_custom__dash">
-                  {event?.creador?._id === currentUserId ? (
-                    <div
-                      className="event_menu_wrap__dash"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        className="event_menu_btn__dash"
-                        type="button"
-                        aria-label="Opciones del evento"
-                        title="Opciones"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuEventId((prev) => (prev === event._id ? null : event._id));
-                        }}
-                      >
-                        
-                        ⋮
-                      </button>
-                      {openMenuEventId === event._id ? (
-                        <div className="event_menu_panel__dash">
-                          <button type="button" onClick={(e) => handleEditEvent(event, e)}>
-                            Editar
-                          </button>
-                          <button type="button" onClick={(e) => handleDeleteEvent(event._id, e)}>
-                            Eliminar
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <h4>{event.nombreEvento}</h4>
-                  <p>{formatDate(event.fechaHora)}</p>
-                  <p>{event.lugar}</p>
-                  <p>Asistentes: {event.asistentesCount || 0}</p>
-                  <button
-                    className="button__dash"
-                    type="button"
-                    onClick={(e) => handleAttend(event._id, e)}
-                  >
-                    {event.isAttending ? "Ya asistiré" : "Asistiré"}
-                  </button>
-                </div>
-                {event.portada ? (
-                  <img className="event_cover_custom__dash" src={event.portada} alt={`Portada de ${event.nombreEvento}`} />
-                ) : null}
-              </div>
-            </article>
-          ))}
+        <>
+          <div className="events_section_block__dash">
+            <h4>Próximos eventos</h4>
+            <div className="events_grid__dash events_custom_grid__dash">
+              {upcomingEvents.map((event) => renderEventCard(event, false))}
+              {!upcomingEvents.length ? (
+                <p className="chat_hint__dash">No hay eventos próximos para tu universidad.</p>
+              ) : null}
+            </div>
+          </div>
 
-          {!sortedEvents.length ? (
-            <p className="chat_hint__dash">No hay eventos publicados para tu universidad.</p>
-          ) : null}
-        </div>
+          <div className="events_section_block__dash">
+            <h4>Eventos pasados</h4>
+            <p className="events_section_hint__dash">Estos eventos ya caducaron y no admiten asistencia.</p>
+            <div className="events_grid__dash events_custom_grid__dash">
+              {pastEvents.map((event) => renderEventCard(event, true))}
+              {!pastEvents.length ? (
+                <p className="chat_hint__dash">Aún no hay eventos pasados.</p>
+              ) : null}
+            </div>
+          </div>
+        </>
       )}
 
       {showCreateModal ? (
@@ -304,6 +371,12 @@ const EventsView = () => {
                 value={form.costo}
                 onChange={(e) => setForm((prev) => ({ ...prev, costo: e.target.value }))}
               />
+              <InterestChips
+                value={form.tags}
+                onChange={(tags) => setForm((prev) => ({ ...prev, tags }))}
+                label="Categorías"
+                hint="Ayuda a recomendar este evento a quien coincida."
+              />
               <div className="events_actions__dash">
                 <button
                   className="button__dash"
@@ -330,6 +403,9 @@ const EventsView = () => {
         <div className="events_modal_overlay__dash" role="dialog" aria-modal="true">
           <div className="events_modal__dash">
             <h4>{selectedEvent.nombreEvento}</h4>
+            {isEventExpired(selectedEvent.fechaHora, now) ? (
+              <p className="event_expired_text__dash">Este evento ya caducó y no admite asistencia.</p>
+            ) : null}
             <p><strong>Fecha/Hora:</strong> {formatDate(selectedEvent.fechaHora)}</p>
             <p><strong>Lugar:</strong> {selectedEvent.lugar}</p>
             <p><strong>Descripcion:</strong> {selectedEvent.descripcionEvento}</p>

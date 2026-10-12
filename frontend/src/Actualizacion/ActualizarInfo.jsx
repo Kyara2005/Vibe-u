@@ -5,6 +5,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./ActualizarInfo.css";
 import { resolveAvatarUrl } from "../utils/mediaUrl";
+import InterestChips from "../components/interests/InterestChips";
+import { sanitizeInterests } from "../utils/interests";
 
 // ➡️ Ruta correcta de tu AvatarCropperModal
 import AvatarCropperModal from "../components/Avatar/AvatarCropperModal.jsx";
@@ -27,6 +29,8 @@ const ActualizarInfo = () => {
   const [userDescription, setUserDescription] = useState("");
   const [userUniversity, setUserUniversity] = useState("");
   const [userCareer, setUserCareer] = useState("");
+  const [userInterests, setUserInterests] = useState([]);
+  const [perfilPublico, setPerfilPublico] = useState(true);
 
   const avatarOptions = [
     "https://api.dicebear.com/6.x/bottts/svg?seed=Avatar1",
@@ -55,6 +59,8 @@ const ActualizarInfo = () => {
         setUserDescription(res.data.descripcion || "");
         setUserUniversity(res.data.universidad || "");
         setUserCareer(res.data.carrera || "");
+        setUserInterests(sanitizeInterests(res.data.intereses));
+        setPerfilPublico(res.data.perfilPublico !== false);
       } catch (err) {
         console.error(
           "Error al cargar datos del usuario, manteniendo la información actual:",
@@ -120,6 +126,8 @@ const ActualizarInfo = () => {
           descripcion: userDescription,
           universidad: userUniversity,
           carrera: userCareer,
+          intereses: userInterests,
+          perfilPublico,
           avatar: avatar,
         },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -134,6 +142,7 @@ const ActualizarInfo = () => {
   };
 
   return (
+    <div className="actualizar-page">
     <div className="actualizar-container">
       <ToastContainer />
 
@@ -282,6 +291,34 @@ const ActualizarInfo = () => {
           />
         </div>
 
+        <InterestChips
+          value={userInterests}
+          onChange={setUserInterests}
+          label="Intereses"
+          hint="Elige lo que te gusta para recomendarte comunidades y eventos."
+        />
+
+        <div className="privacy-box">
+          <p className="field-label">Privacidad del perfil</p>
+          <p className="privacy-hint">Si lo pones privado, en las búsquedas solo se verá tu nombre y foto.</p>
+          <div className="privacy-options">
+            <button
+              type="button"
+              className={`privacy-option${perfilPublico ? " is-on" : ""}`}
+              onClick={() => setPerfilPublico(true)}
+            >
+              Público
+            </button>
+            <button
+              type="button"
+              className={`privacy-option${!perfilPublico ? " is-on" : ""}`}
+              onClick={() => setPerfilPublico(false)}
+            >
+              Privado
+            </button>
+          </div>
+        </div>
+
         <div className="btn-row">
           <button className="cancel-btn" onClick={() => navigate("/dashboard/ajustes")}>
             Cancelar
@@ -292,6 +329,7 @@ const ActualizarInfo = () => {
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 };

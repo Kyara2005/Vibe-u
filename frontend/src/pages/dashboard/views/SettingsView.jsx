@@ -27,7 +27,7 @@ const SettingsView = () => {
           Modo {theme === DARK_THEME ? "claro" : "oscuro"}
         </button>
         <button className="button__dash1" onClick={() => navigate("/actualizar-info")}>Actualizar informacion</button>
-        <button className="button__dash1" onClick={() => navigate("/actualizar-pass")}>Cambiar password</button>
+        <button className="button__dash1" onClick={() => navigate("/actualizar-pass")}>Cambiar contraseña</button>
         <button className="button__dash1" onClick={cerrarSesion}>Cerrar sesion</button>
       </div>
     </section>

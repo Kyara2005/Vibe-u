@@ -1,0 +1,90 @@
+.interest-chips {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+
+.interest-chips__label {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: inherit;
+}
+
+.interest-chips__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: #7a2f73;
+}
+
+.interest-chips__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.interest-chip {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid #ebc5dc;
+  background: #fff;
+  color: #6c0063;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.interest-chip:hover {
+  transform: translateY(-1px);
+  border-color: #c77db8;
+}
+
+.interest-chip.is-on {
+  background: linear-gradient(135deg, #8b2f86, #c45bb0);
+  border-color: transparent;
+  color: #fff;
+}
+
+@media (min-width: 560px) {
+  .interest-chips__row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .interest-chip {
+    font-size: 0.74rem;
+    padding: 7px 8px;
+    min-height: 36px;
+  }
+}
+
+[data-theme="dark"] .interest-chips__hint {
+  color: #c9b3d6;
+}
+
+[data-theme="dark"] .interest-chip {
+  background: #162033;
+  border-color: #3d5168;
+  color: #e6edf7;
+}
+
+[data-theme="dark"] .interest-chip.is-on,
+[data-theme="dark"] .modal-overlay .interest-chip.is-on {
+  background: linear-gradient(135deg, #7c3aed, #c45bb0);
+  border-color: transparent;
+  color: #fff;
+}

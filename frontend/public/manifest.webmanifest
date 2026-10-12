@@ -4,7 +4,7 @@
   "description": "Vibe-U: La app que pone a la U en modo social",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#6c0063",
   "theme_color": "#6c0063",
   "icons": [
     {

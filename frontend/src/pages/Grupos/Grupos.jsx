@@ -3,17 +3,25 @@ import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
-    FaPlus, FaArrowLeft, FaThumbsUp, FaComment, FaSearch, FaTimes, FaEllipsisH, FaShare, 
+    FaPlus, FaArrowLeft, FaThumbsUp, FaComment, FaSearch, FaTimes, FaEllipsisH, 
     FaGlobeAmericas, FaRegImage, FaUserFriends, FaUserCircle, FaTrash, FaSignOutAlt, FaRegFileAlt,
-    FaRegBookmark, FaBookmark, FaPaperPlane
+    FaRegBookmark, FaBookmark, FaPaperPlane, FaCheck, FaBell
 } from 'react-icons/fa';
 import './Grupos.css';
 import { resolveAvatarUrl } from "../../utils/mediaUrl";
+import { getInvitePeople, searchRegisteredUsers } from "../../Services/users";
+import InterestChips from "../../components/interests/InterestChips";
+import { sanitizeInterests } from "../../utils/interests";
+import storeNotifications from "../../context/storeNotifications";
+import NotifBadge from "../../components/notifications/NotifBadge";
+import "../../components/notifications/NotificationAlerts.css";
 
 const API_URL = `${import.meta.env.VITE_BACKEND_URL}/api/grupos`;
+const DEFAULT_AVATAR = "/default-avatar.svg";
 
 const Grupos = () => {
     const navigate = useNavigate();
+    const unreadCount = storeNotifications((state) => state.unreadCount);
     // --- ESTADOS DE DATOS ---
     const [grupos, setGrupos] = useState([]);
     const [filtro, setFiltro] = useState("");
@@ -43,12 +51,23 @@ const Grupos = () => {
 
     // --- ESTADOS DE CREACIÓN Y RECORTE ---
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [nuevoGrupo, setNuevoGrupo] = useState({ nombre: "", imagen: "" });
+    const [nuevoGrupo, setNuevoGrupo] = useState({ nombre: "", imagen: "", tags: [], descripcion: "" });
     const [imageToCrop, setImageToCrop] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
     const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [membersOpen, setMembersOpen] = useState(false);
+    const [inviteQuery, setInviteQuery] = useState("");
+    const [inviteResults, setInviteResults] = useState([]);
+    const [inviteError, setInviteError] = useState("");
+    const [inviteOk, setInviteOk] = useState("");
+    const [inviteBusy, setInviteBusy] = useState(false);
+    const [inviteConfirm, setInviteConfirm] = useState(null);
+    const [invitePool, setInvitePool] = useState([]);
+    const [miembros, setMiembros] = useState([]);
+    const [membersError, setMembersError] = useState("");
 
     const fileInputRef = useRef(null);
     const postFotoRef = useRef(null);
@@ -128,7 +147,7 @@ const Grupos = () => {
                 croppedAreaPixels.x, croppedAreaPixels.y, croppedAreaPixels.width, croppedAreaPixels.height,
                 0, 0, croppedAreaPixels.width, croppedAreaPixels.height
             );
-            setNuevoGrupo({ ...nuevoGrupo, imagen: canvas.toDataURL('image/jpeg') });
+            setNuevoGrupo((prev) => ({ ...prev, imagen: canvas.toDataURL('image/jpeg') }));
             setImageToCrop(null); 
         } catch (e) { console.error("Error al recortar", e); }
     };
@@ -188,13 +207,15 @@ const Grupos = () => {
                 },
                 body: JSON.stringify({
                     nombre: nuevoGrupo.nombre,
-                    imagen: nuevoGrupo.imagen
+                    imagen: nuevoGrupo.imagen,
+                    descripcion: nuevoGrupo.descripcion,
+                    tags: sanitizeInterests(nuevoGrupo.tags),
                 })
             });
             const data = await res.json();
             setGrupos([data, ...grupos]);
             setIsModalOpen(false);
-            setNuevoGrupo({ nombre: "", imagen: "" });
+            setNuevoGrupo({ nombre: "", imagen: "", tags: [], descripcion: "" });
         } catch (error) { console.error(error); }
         finally { setLoading(false); }
     };
@@ -329,9 +350,126 @@ const Grupos = () => {
     };
 
     const entrarAGrupo = (grupo) => setGrupoActivo(grupo);
-    const salirDeGrupo = () => setGrupoActivo(null);
+    const salirDeGrupo = () => {
+        setGrupoActivo(null);
+        setInviteOpen(false);
+        setMembersOpen(false);
+        setInviteQuery("");
+        setInviteResults([]);
+        setMiembros([]);
+    };
     const toggleLike = (postId) => setLikes(prev => ({ ...prev, [postId]: !prev[postId] }));
     const toggleGuardar = (postId) => setGuardados(prev => ({ ...prev, [postId]: !prev[postId] }));
+
+    const cargarMiembros = async (grupoId) => {
+        try {
+            if (!token) return navigate("/login");
+            setMembersError("");
+            const res = await fetch(`${API_URL}/${grupoId}/miembros`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setMembersError(data?.message || "No se pudieron cargar los miembros.");
+                setMiembros([]);
+                return [];
+            }
+            setMiembros(Array.isArray(data) ? data : []);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error(error);
+            setMembersError("No se pudieron cargar los miembros.");
+            return [];
+        }
+    };
+
+    const abrirMiembros = async (grupoId) => {
+        setMembersOpen(true);
+        await cargarMiembros(grupoId);
+    };
+
+    const filterInvitePeople = (people = [], membersList = miembros) => {
+        const memberIds = new Set(membersList.map((user) => String(user._id)));
+        const emails = new Set((grupoActivo?.miembrosArray || []).map((email) => String(email).toLowerCase()));
+        return people.filter((user) => {
+            if (memberIds.has(String(user._id))) return false;
+            const email = String(user.correoInstitucional || "").toLowerCase();
+            return !email || !emails.has(email);
+        });
+    };
+
+    const abrirInvitar = async () => {
+        setInviteError("");
+        setInviteOk("");
+        setInviteQuery("");
+        setInviteOpen(true);
+        try {
+            if (!token) return navigate("/login");
+            const membersList = grupoActivo?._id ? await cargarMiembros(grupoActivo._id) : [];
+            const { data } = await getInvitePeople();
+            const pool = Array.isArray(data) ? data : [];
+            setInvitePool(pool);
+            setInviteResults(filterInvitePeople(pool, membersList || []));
+            setInviteConfirm(null);
+        } catch (error) {
+            console.error(error);
+            setInviteError("No se pudieron cargar las personas para invitar.");
+            setInvitePool([]);
+            setInviteResults([]);
+        }
+    };
+
+    const handleInvitarUsuario = async (user) => {
+        const userId = user?._id;
+        if (!grupoActivo?._id || !userId || inviteBusy) return;
+        try {
+            if (!token) return navigate("/login");
+            setInviteBusy(true);
+            setInviteError("");
+            setInviteOk("");
+            const res = await fetch(`${API_URL}/${grupoActivo._id}/invitar`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ userId }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setInviteError(data?.message || "No se pudo invitar.");
+                return;
+            }
+            setInviteResults((prev) => prev.filter((item) => item._id !== userId));
+            setInvitePool((prev) => prev.filter((item) => item._id !== userId));
+            setInviteConfirm(null);
+            setInviteOk(`Invitación enviada a ${user.nombre}. Podrá aceptarla desde Notificaciones.`);
+        } catch (error) {
+            console.error(error);
+            setInviteError("No se pudo invitar.");
+        } finally {
+            setInviteBusy(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!inviteOpen) return undefined;
+        const query = inviteQuery.trim();
+        const timeoutId = setTimeout(async () => {
+            try {
+                if (!query) {
+                    setInviteResults(filterInvitePeople(invitePool));
+                    return;
+                }
+                const { data } = await searchRegisteredUsers(query);
+                setInviteResults(filterInvitePeople(Array.isArray(data) ? data : []));
+            } catch (error) {
+                console.error(error);
+                setInviteError("No se pudieron buscar usuarios.");
+            }
+        }, 280);
+        return () => clearTimeout(timeoutId);
+    }, [inviteOpen, inviteQuery, grupoActivo, miembros, invitePool]);
 
     // --- RENDER MURO (GRUPO ACTIVO) ---
     if (grupoActivo) {
@@ -354,8 +492,14 @@ const Grupos = () => {
                                 <p className="grupo-active-meta"><FaGlobeAmericas /> Grupo Público · <b>{grupoData.miembrosArray?.length || 1} miembros</b></p>
                             </div>
                             <div className="fb-header-btns">
-                                <button className="btn-fb-blue"><FaPlus /> Invitar</button>
-                                <button className="btn-fb-gray"><FaUserFriends /> Miembro</button>
+                                {esCreadorGrupo || grupoData.miembrosArray?.includes(userEmail) || esAdminGlobal ? (
+                                    <button className="btn-fb-blue" type="button" onClick={abrirInvitar}>
+                                        <FaPlus /> Invitar
+                                    </button>
+                                ) : null}
+                                <button className="btn-fb-gray" type="button" onClick={() => abrirMiembros(grupoData._id)}>
+                                    <FaUserFriends /> Miembros
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -389,6 +533,8 @@ const Grupos = () => {
                             const esMiPost = post.autorEmail === userEmail || post.autor === userName;
                             const puedeEliminarPost = esMiPost || esCreadorGrupo || esAdminGlobal;
                             const estaAbierto = comentariosAbiertos[post._id];
+                            const nComentarios = post.comentarios?.length || 0;
+                            const nLikes = likes[post._id] ? 1 : 0;
 
                             return (
                                 <div key={post._id} className="fb-card-white post-container">
@@ -398,10 +544,9 @@ const Grupos = () => {
                                         </div>
                                         <div className="post-user-meta">
                                             <span className="author-fb">{esMiPost ? userName : (post.autor || "Usuario")}</span>
-                                            <span className="time-fb">Ahora · <FaGlobeAmericas /></span>
+                                            <span className="time-fb">Ahora · <FaGlobeAmericas /> {grupoData.nombre}</span>
                                         </div>
                                         <div className="post-actions-right">
-                                            <button className={`btn-save-post ${guardados[post._id] ? 'active' : ''}`} onClick={() => toggleGuardar(post._id)}>{guardados[post._id] ? <FaBookmark /> : <FaRegBookmark />}</button>
                                             <button className="btn-fb-options" onClick={() => setMenuAbiertoId(menuAbiertoId === post._id ? null : post._id)}><FaEllipsisH /></button>
                                             {menuAbiertoId === post._id && puedeEliminarPost ? (
                                                 <div className="dropdown-fb-style post-dropdown-menu" style={{ display: "block" }}>
@@ -412,19 +557,36 @@ const Grupos = () => {
                                             ) : null}
                                         </div>
                                     </div>
-                                    <div className="post-body-text">{post.contenido}</div>
+                                    {post.contenido ? <div className="post-body-text">{post.contenido}</div> : null}
                                     {post.foto && <div className="post-image-main"><img src={post.foto} className="img-full-post" alt="post" /></div>}
+
+                                    {(nLikes > 0 || nComentarios > 0) ? (
+                                    <div className="post-footer-metrics">
+                                        <span className="post-metrics-left">
+                                            {nLikes > 0 ? <><span className="reaction-pill" aria-hidden="true">👍</span> {nLikes}</> : null}
+                                        </span>
+                                        <span className="post-metrics-right">
+                                            {nComentarios > 0 ? `${nComentarios} comentario${nComentarios === 1 ? "" : "s"}` : null}
+                                        </span>
+                                    </div>
+                                    ) : null}
                                     
                                     <div className="post-action-buttons-fb">
-                                        <button onClick={() => toggleLike(post._id)} className={likes[post._id] ? "liked" : ""}>
+                                        <button type="button" onClick={() => toggleLike(post._id)} className={likes[post._id] ? "liked" : ""}>
                                             <FaThumbsUp /> Me gusta
                                         </button>
                                         
-                                        <button onClick={() => toggleComentarios(post._id)}>
+                                        <button type="button" onClick={() => toggleComentarios(post._id)}>
                                             <FaComment /> Comentar
                                         </button>
                                         
-                                        <button><FaShare /> Compartir</button>
+                                        <button
+                                            type="button"
+                                            className={`btn-save-post ${guardados[post._id] ? "active" : ""}`}
+                                            onClick={() => toggleGuardar(post._id)}
+                                        >
+                                            {guardados[post._id] ? <FaBookmark /> : <FaRegBookmark />} Guardar
+                                        </button>
                                     </div>
 
                                     {/* SECCIÓN DE COMENTARIOS CON DESPLIEGUE Y BOTÓN DE ENVIAR A LA DERECHA */}
@@ -475,6 +637,112 @@ const Grupos = () => {
                         })}
                     </main>
                 </div>
+
+                {inviteOpen ? (
+                    <div className="modal-overlay" role="dialog" aria-modal="true">
+                        <div className="vibe-modal-container">
+                            <div className="vibe-modal-header">
+                                <button className="vibe-close-circle" type="button" onClick={() => { setInviteOpen(false); setInviteConfirm(null); }}><FaTimes /></button>
+                                <h3 className="vibe-modal-title-main">Invitar al grupo</h3>
+                            </div>
+                            <div className="vibe-modal-content-body">
+                                <input
+                                    className="vibe-input-field"
+                                    placeholder="Buscar por nombre..."
+                                    value={inviteQuery}
+                                    onChange={(e) => setInviteQuery(e.target.value)}
+                                />
+                                {inviteError ? <p className="grupo-action-error">{inviteError}</p> : null}
+                                {inviteOk ? <p className="grupo-action-ok">{inviteOk}</p> : null}
+                                <div className="grupo-people-list">
+                                    {inviteResults.map((user) => (
+                                        <button
+                                            key={user._id}
+                                            className="grupo-people-row"
+                                            type="button"
+                                            disabled={inviteBusy}
+                                            onClick={() => { setInviteOk(""); setInviteConfirm(user); }}
+                                        >
+                                            <img
+                                                src={resolveAvatarUrl(user.avatar) || DEFAULT_AVATAR}
+                                                alt={user.nombre}
+                                                className="grupo-people-avatar"
+                                            />
+                                            <div className="grupo-people-meta">
+                                                <strong>{user.nombre}</strong>
+                                                <span>{user.universidad || user.carrera || "Estudiante"}</span>
+                                            </div>
+                                            <span className="grupo-invite-plus" aria-hidden="true">
+                                                <FaPlus />
+                                            </span>
+                                        </button>
+                                    ))}
+                                    {!inviteQuery.trim() && !inviteResults.length ? (
+                                        <p>No hay personas disponibles para invitar.</p>
+                                    ) : null}
+                                    {inviteQuery.trim() && !inviteResults.length ? (
+                                        <p>No hay resultados para invitar.</p>
+                                    ) : null}
+                                </div>
+                                {inviteConfirm ? (
+                                    <div className="invite-confirm-box" role="alertdialog" aria-modal="true">
+                                        <p>¿Seguro quieres invitar a {inviteConfirm.nombre}?</p>
+                                        <div className="invite-confirm-actions">
+                                            <button
+                                                type="button"
+                                                className="invite-confirm-no"
+                                                aria-label="Cancelar invitación"
+                                                disabled={inviteBusy}
+                                                onClick={() => setInviteConfirm(null)}
+                                            >
+                                                <FaTimes />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="invite-confirm-yes"
+                                                aria-label="Confirmar invitación"
+                                                disabled={inviteBusy}
+                                                onClick={() => handleInvitarUsuario(inviteConfirm)}
+                                            >
+                                                <FaCheck />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+
+                {membersOpen ? (
+                    <div className="modal-overlay" role="dialog" aria-modal="true">
+                        <div className="vibe-modal-container">
+                            <div className="vibe-modal-header">
+                                <button className="vibe-close-circle" type="button" onClick={() => setMembersOpen(false)}><FaTimes /></button>
+                                <h3 className="vibe-modal-title-main">Miembros</h3>
+                            </div>
+                            <div className="vibe-modal-content-body">
+                                {membersError ? <p className="grupo-action-error">{membersError}</p> : null}
+                                <div className="grupo-people-list">
+                                    {miembros.map((user) => (
+                                        <div key={user._id || user.correoInstitucional} className="grupo-people-row">
+                                            <img
+                                                src={resolveAvatarUrl(user.avatar) || DEFAULT_AVATAR}
+                                                alt={user.nombre}
+                                                className="grupo-people-avatar"
+                                            />
+                                            <div className="grupo-people-meta">
+                                                <strong>{user.nombre}</strong>
+                                                <span>{user.correoInstitucional}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {!membersError && !miembros.length ? <p>Este grupo aún no tiene miembros visibles.</p> : null}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
             </div>
         );
     }
@@ -487,7 +755,18 @@ const Grupos = () => {
                     <button className="btn-back-main-page" onClick={() => navigate("/dashboard/feed")}><FaArrowLeft /></button>
                     <h2 className="grupos-main-title">Comunidades</h2>
                 </div>
-                <button className="btn-crear-grupo" onClick={() => setIsModalOpen(true)}><FaPlus /></button>
+                <div className="header-right-side">
+                    <button
+                        className="btn-crear-grupo btn-notif-grupo"
+                        type="button"
+                        onClick={() => navigate("/dashboard/notificaciones")}
+                        aria-label="Notificaciones"
+                    >
+                        <FaBell />
+                        <NotifBadge count={unreadCount} />
+                    </button>
+                    <button className="btn-crear-grupo" onClick={() => setIsModalOpen(true)}><FaPlus /></button>
+                </div>
             </div>
             
             <div className="search-bar-pure-white">
@@ -503,7 +782,8 @@ const Grupos = () => {
             <div className="grupos-grid-moderno">
                 {grupos
                 .filter(g => {
-                    const match = g.nombre?.toLowerCase().includes(filtro.toLowerCase());
+                    const match = (g.nombre || "").toLowerCase().includes(filtro.toLowerCase())
+                        || (g.descripcion || "").toLowerCase().includes(filtro.toLowerCase());
                     return pestana === "mis-grupos" ? (match && g.miembrosArray?.includes(userEmail)) : match;
                 })
                 .map(grupo => {
@@ -517,6 +797,7 @@ const Grupos = () => {
                                 <img src={grupo.imagen || "https://via.placeholder.com/150"} className="grupo-img-mini-square" alt={grupo.nombre} />
                                 <div className="grupo-textos-info">
                                     <h3 className="grupo-nombre-bold">{grupo.nombre}</h3>
+                                    {grupo.descripcion ? <p className="grupo-desc-text">{grupo.descripcion}</p> : null}
                                     <p className="grupo-miembros-text">{grupo.miembrosArray?.length || 1} miembros</p>
                                 </div>
                             </div>
@@ -527,7 +808,7 @@ const Grupos = () => {
                                     <button className="btn-ver-grupo-vibe-blue" onClick={() => entrarAGrupo(grupo)}>Ver</button>
                                 )}
                                 
-                                <div style={{ position: 'relative' }}>
+                                <div className="grupo-card-menu-wrap">
                                     <button className="btn-dots-gray" onClick={() => setMenuAbiertoId(menuAbiertoId === grupo._id ? null : grupo._id)}><FaEllipsisH /></button>
                                     {menuAbiertoId === grupo._id && (
                                         <div className="dropdown-fb-style" style={{ display: 'block' }}>
@@ -559,7 +840,21 @@ const Grupos = () => {
                         </div>
                         <form onSubmit={handleCrearGrupo}>
                             <div className="vibe-modal-content-body">
-                                <input className="vibe-input-field" placeholder="Nombre del grupo" required value={nuevoGrupo.nombre} onChange={(e) => setNuevoGrupo({...nuevoGrupo, nombre: e.target.value})} />
+                                <input className="vibe-input-field" placeholder="Nombre del grupo" required value={nuevoGrupo.nombre} onChange={(e) => setNuevoGrupo((prev) => ({ ...prev, nombre: e.target.value }))} />
+                                <textarea
+                                    className="vibe-input-field vibe-textarea-field"
+                                    placeholder="Descripción del grupo"
+                                    rows={3}
+                                    maxLength={400}
+                                    value={nuevoGrupo.descripcion || ""}
+                                    onChange={(e) => setNuevoGrupo((prev) => ({ ...prev, descripcion: e.target.value }))}
+                                />
+                                <InterestChips
+                                    value={nuevoGrupo.tags || []}
+                                    onChange={(tags) => setNuevoGrupo((prev) => ({ ...prev, tags }))}
+                                    label="Intereses de la comunidad"
+                                    hint="Así podemos recomendar este grupo a las personas indicadas."
+                                />
                                 <div className="vibe-upload-box" onClick={() => fileInputRef.current.click()}>
                                     {nuevoGrupo.imagen ? <img src={nuevoGrupo.imagen} className="vibe-img-fit" alt="preview" /> : <p>Subir foto de portada</p>}
                                 </div>

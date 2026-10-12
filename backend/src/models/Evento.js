@@ -9,6 +9,7 @@ const eventoSchema = new mongoose.Schema(
     descripcionEvento: { type: String, required: true, trim: true },
     costo: { type: String, required: true, trim: true },
     universidad: { type: String, required: true, trim: true, index: true },
+    tags: { type: [String], default: [] },
     creador: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true },
     asistentes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
     recordatoriosEnviados: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],

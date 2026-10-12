@@ -226,6 +226,14 @@
     flex-direction: column;
   }
 
+  .gmod-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .gmod-select {
+    width: 100%;
+  }
+
   .gmod-btn-primary {
     width: 100%;
   }
@@ -376,6 +384,14 @@
 
   .gmod-head {
     flex-direction: column;
+  }
+
+  .gmod-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .gmod-select {
+    width: 100%;
   }
 
   .gmod-btn-primary {

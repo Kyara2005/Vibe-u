@@ -26,10 +26,16 @@ const chatMessageSchema = new mongoose.Schema(
       trim: true,
       maxlength: 2000,
     },
+    unreadForReceiver: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
   },
   { timestamps: true, versionKey: false }
 );
 
 chatMessageSchema.index({ conversation: 1, createdAt: 1 });
+chatMessageSchema.index({ receiver: 1, unreadForReceiver: 1, createdAt: -1 });
 
 export default mongoose.model("ChatMessage", chatMessageSchema);

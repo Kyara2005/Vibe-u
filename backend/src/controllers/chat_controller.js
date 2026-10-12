@@ -8,6 +8,11 @@ const CHAT_USER_FIELDS = "_id nombre correoInstitucional avatar universidad carr
 
 const toIdString = (value) => value?.toString();
 
+const toObjectId = (value) => {
+  const id = toIdString(value);
+  return mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
+};
+
 const buildHash = (a, b) => [toIdString(a), toIdString(b)].sort().join(":");
 
 const mapMessage = (message) => ({
@@ -57,6 +62,15 @@ const listConversations = async (req, res) => {
       .sort({ lastMessageAt: -1, updatedAt: -1 })
       .lean();
 
+    const meObjectId = toObjectId(req.usuario._id);
+    const unreadRows = meObjectId
+      ? await ChatMessage.aggregate([
+          { $match: { receiver: meObjectId, unreadForReceiver: true } },
+          { $group: { _id: "$conversation", count: { $sum: 1 } } },
+        ])
+      : [];
+    const unreadMap = new Map(unreadRows.map((row) => [toIdString(row._id), row.count]));
+
     const payload = conversations
       .map((conversation) => {
         const otherUser = (conversation.participants || []).find(
@@ -70,6 +84,7 @@ const listConversations = async (req, res) => {
           lastMessage: conversation.lastMessage || "",
           lastMessageAt: conversation.lastMessageAt || conversation.updatedAt,
           updatedAt: conversation.updatedAt,
+          unreadCount: unreadMap.get(toIdString(conversation._id)) || 0,
         };
       })
       .filter(Boolean);
@@ -110,6 +125,11 @@ const getMessagesByUser = async (req, res) => {
         messages: [],
       });
     }
+
+    await ChatMessage.updateMany(
+      { conversation: conversation._id, receiver: meId, unreadForReceiver: true },
+      { $set: { unreadForReceiver: false } }
+    );
 
     const messages = await ChatMessage.find({ conversation: conversation._id })
       .sort({ createdAt: 1 })
@@ -171,6 +191,7 @@ const sendMessage = async (req, res) => {
       sender: meId,
       receiver: toUserId,
       content: text,
+      unreadForReceiver: true,
     });
 
     conversation.lastMessage = text;
@@ -186,4 +207,38 @@ const sendMessage = async (req, res) => {
   }
 };
 
-export { listAvailableUsers, listConversations, getMessagesByUser, sendMessage };
+const getChatUnread = async (req, res) => {
+  try {
+    const meId = toObjectId(req.usuario._id);
+    const unreadCount = await ChatMessage.countDocuments({
+      receiver: meId,
+      unreadForReceiver: true,
+    });
+    const latest = await ChatMessage.findOne({
+      receiver: meId,
+      unreadForReceiver: true,
+    })
+      .sort({ createdAt: -1 })
+      .populate("sender", "nombre")
+      .lean();
+
+    res.status(200).json({
+      unreadCount,
+      latest: latest
+        ? {
+            _id: latest._id,
+            content: latest.content,
+            createdAt: latest.createdAt,
+            fromUser: {
+              _id: latest.sender?._id,
+              nombre: latest.sender?.nombre || "Alguien",
+            },
+          }
+        : null,
+    });
+  } catch (error) {
+    res.status(500).json({ msg: "Error al obtener mensajes no leidos" });
+  }
+};
+
+export { listAvailableUsers, listConversations, getMessagesByUser, sendMessage, getChatUnread };

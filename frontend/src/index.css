@@ -12,6 +12,17 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 [data-theme="dark"] {
   color-scheme: dark;
   --app-bg: linear-gradient(90deg, #0F1115, #441952b7);
@@ -79,9 +90,7 @@
 
 [data-theme="dark"] .login-container,
 [data-theme="dark"] .register-page,
-[data-theme="dark"] .forgot-page,
-[data-theme="dark"] .beneficios-container,
-[data-theme="dark"] .contacto-container{
+[data-theme="dark"] .forgot-page {
   filter: brightness(0.92);
 }
 a {
@@ -95,14 +104,36 @@ a:hover {
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--app-bg);
   color: var(--app-text);
-  overflow-x: hidden; /* Evita que se desborde horizontalmente */
+  overflow-x: hidden;
+}
+body.nav-open {
+  overflow: hidden;
+}
+img,
+video {
+  max-width: 100%;
+}
+input,
+textarea,
+select {
+  font-size: 16px;
+  max-width: 100%;
 }
 h1 {
-  font-size: 3.2em;
+  font-size: clamp(1.8rem, 5vw, 3.2em);
   line-height: 1.1;
+}
+.shell__dash h1 {
+  font-size: 1.55rem;
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: clamp(1.5rem, 8vw, 2.2rem);
+  }
 }
 button {
   border-radius: 8px;

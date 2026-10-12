@@ -36,6 +36,7 @@ import PublicRoute from "./routes/PublicRouter.jsx";
 import PrivateRoute from "./routes/PrivateRouter.jsx";
 import MobileOnlyRoute from "./routes/MobileOnlyRoute.jsx";
 import AdminRoute from "./routes/AdminRoute.jsx";
+import AdminLayout from "./routes/AdminLayout.jsx";
 
 import storeProfile from "./context/storeProfile";
 import storeAuth from "./context/storeAuth";
@@ -100,9 +101,11 @@ function App() {
           <Route path="actualizar-info" element={<ActualizarInfo />} />
           <Route path="actualizar-pass" element={<ChangePasswordForm />} />
           <Route element={<AdminRoute />}>
-            <Route path="gusuarios" element={<Gusuario />} />
-            <Route path="gautomatizacion" element={<Gautomatizacion />} />
-            <Route path="gmoderacion" element={<Gmoderacion />} />
+            <Route element={<AdminLayout />}>
+              <Route path="gusuarios" element={<Gusuario />} />
+              <Route path="gautomatizacion" element={<Gautomatizacion />} />
+              <Route path="gmoderacion" element={<Gmoderacion />} />
+            </Route>
           </Route>
 
           <Route element={<MobileOnlyRoute />}>

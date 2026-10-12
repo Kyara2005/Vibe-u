@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FaChartBar, FaHeart, FaPlus, FaRobot, FaSearch, FaUserShield, FaUsers } from "react-icons/fa";
+import { FaBell, FaChartBar, FaHeart, FaPlus, FaRobot, FaSearch, FaUserShield, FaUsers } from "react-icons/fa";
 import Sidebar from "../../components/Sidebar";
 import CreatePostView from "./views/CreatePostView";
+import storeNotifications from "../../context/storeNotifications";
+import NotifBadge from "../../components/notifications/NotifBadge";
+import "../../components/notifications/NotificationAlerts.css";
 import {
   comentarPost,
   eliminarComentarioPost,
@@ -54,6 +57,7 @@ const UserDashboard = () => {
     typeof window !== "undefined" ? window.innerWidth <= 770 : false
   );
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const unreadCount = storeNotifications((state) => state.unreadCount);
 
   useEffect(() => {
     const onResize = () => {
@@ -159,7 +163,9 @@ const UserDashboard = () => {
                 <div className="suggestion_profile_meta__dash">
                   <strong>{user.nombre}</strong>
                   <span>
-                    {user.carrera || "Perfil"}{user.universidad ? ` • ${user.universidad}` : ""}
+                    {user.perfilPublico === false
+                      ? "Perfil privado"
+                      : `${user.carrera || "Perfil"}${user.universidad ? ` • ${user.universidad}` : ""}`}
                   </span>
                 </div>
               </div>
@@ -200,6 +206,16 @@ const UserDashboard = () => {
             {isMobileLayout ? (
               <>
                 <div className="mobile_actions__dash">
+                  <button
+                    type="button"
+                    className="mobile_action_btn__dash"
+                    onClick={() => navigate("/dashboard/notificaciones")}
+                    aria-label="Notificaciones"
+                    title="Notificaciones"
+                  >
+                    <FaBell />
+                    <NotifBadge count={unreadCount} />
+                  </button>
                   <button
                     type="button"
                     className="mobile_action_btn__dash"
@@ -276,6 +292,16 @@ const UserDashboard = () => {
             ) : (
               <>
                 {renderSearchBox()}
+                <button
+                  type="button"
+                  className="topbar_bell__dash"
+                  onClick={() => navigate("/dashboard/notificaciones")}
+                  aria-label="Notificaciones"
+                  title="Notificaciones"
+                >
+                  <FaBell />
+                  <NotifBadge count={unreadCount} />
+                </button>
                 {isAdmin ? (
                   <>
                     <button className="button__dash" onClick={() => navigate("/gusuarios")}>Gestion usuarios</button>

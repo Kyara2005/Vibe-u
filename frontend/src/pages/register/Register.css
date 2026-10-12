@@ -1,7 +1,8 @@
 /* Fondo general dividido en dos secciones */
 .register-page {
     display: flex;
-    height: 100vh;
+    min-height: 100dvh;
+    height: auto;
     background: linear-gradient(135deg, #2c003e, #5e1b7b);
     color: #fff;
     font-family: 'Poppins', sans-serif;
@@ -86,11 +87,11 @@
 
 .register-form input {
     width: 100%;
-    padding: 10px 12px;
+    padding: 12px;
     border-radius: 8px;
     border: 1px solid #ccc;
     outline: none;
-    font-size: 0.95rem;
+    font-size: 16px;
 }
 
 .register-form input:focus {
@@ -122,7 +123,7 @@
 @media (max-width: 768px) {
     .register-page {
         display: block;
-        min-height: 100vh;
+        min-height: 100dvh;
     }
 
     .register-left {
@@ -130,16 +131,14 @@
     }
 
     .register-right {
-        min-height: 100vh;
+        min-height: 100dvh;
         width: 100%;
-        padding: 20px;
-        box-sizing: border-box;
+        padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
     }
 
     .register-card {
         width: 100%;
         max-width: 400px;
-        padding: 30px 20px;
-        box-sizing: border-box;
+        padding: 28px 18px;
     }
 }

@@ -24,3 +24,5 @@ export const getMessagesWithUser = (userId) =>
 
 export const sendMessageToUser = (toUserId, content) =>
   axios.post("/chat/messages", { toUserId, content }, getAuthConfig());
+
+export const getChatUnread = () => axios.get("/chat/unread", getAuthConfig());

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PostCard } from "../UserDashboard";
 import { resolveAvatarUrl } from "../../../utils/mediaUrl";
+import { INTEREST_CATALOG, sanitizeInterests } from "../../../utils/interests";
 
 const ProfileView = () => {
   const navigate = useNavigate();
@@ -48,6 +49,15 @@ const ProfileView = () => {
         <div>
           <h3>{perfil?.nombre || "Usuario"}</h3>
           <p>{perfil?.descripcion || "Sin descripcion por ahora."}</p>
+          {sanitizeInterests(perfil?.intereses).length ? (
+            <div className="profile_interests__dash">
+              {sanitizeInterests(perfil?.intereses).map((id) => (
+                <span key={id}>
+                  {INTEREST_CATALOG.find((item) => item.id === id)?.label || id}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="stats__dash">
             <span>{perfil?.universidad || "Universidad"}</span>
             <span>{perfil?.carrera || "Carrera"}</span>

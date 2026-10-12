@@ -7,8 +7,23 @@ import {
   respondFriendRequest,
 } from "../../../Services/users";
 import { getEventNotifications } from "../../../Services/events";
+import { getGroupInvites, respondGroupInvite } from "../../../Services/groups";
+import storeNotifications from "../../../context/storeNotifications";
 
-const HISTORY_KEY = "vibeu.notifications.history.v1";
+const HISTORY_KEY = "vibeu.notifications.history.v2";
+
+const isSameLocalDay = (value, now = new Date()) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+};
+
+const notificationReceivedAt = (item = {}) =>
+  item.receivedAt || item.createdAt || item.firstSeenAt || Date.now();
 
 const readHistory = () => {
   try {
@@ -43,17 +58,19 @@ const NotificationsView = () => {
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
         setError("");
-        const [friendsRes, eventsRes, moderationRes, matchRes] = await Promise.all([
+        const [friendsRes, eventsRes, moderationRes, matchRes, groupInvitesRes] = await Promise.all([
           getFriendNotifications(),
           getEventNotifications(),
           getModerationNotifications(),
           getMatchNotifications(),
+          getGroupInvites().catch(() => ({ data: [] })),
         ]);
         const friendItems = Array.isArray(friendsRes?.data) ? friendsRes.data : [];
         const eventItems = Array.isArray(eventsRes?.data) ? eventsRes.data : [];
         const moderationItems = Array.isArray(moderationRes?.data) ? moderationRes.data : [];
         const matchItems = Array.isArray(matchRes?.data) ? matchRes.data : [];
-        const merged = [...friendItems, ...eventItems, ...moderationItems, ...matchItems].sort(
+        const groupInviteItems = Array.isArray(groupInvitesRes?.data) ? groupInvitesRes.data : [];
+        const merged = [...friendItems, ...eventItems, ...moderationItems, ...matchItems, ...groupInviteItems].sort(
           (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
         );
         setNotifications(merged);
@@ -63,18 +80,21 @@ const NotificationsView = () => {
         const now = new Date().toISOString();
         merged.forEach((item) => {
           const prev = map.get(item._id);
+          const receivedAt = prev?.receivedAt || item.createdAt || now;
           map.set(item._id, {
             ...prev,
             ...item,
-            firstSeenAt: prev?.firstSeenAt || item.createdAt || now,
+            receivedAt,
+            firstSeenAt: prev?.firstSeenAt || receivedAt,
             lastSeenAt: now,
           });
         });
         const history = [...map.values()].sort(
-          (a, b) => new Date(b.lastSeenAt || b.createdAt || 0) - new Date(a.lastSeenAt || a.createdAt || 0)
+          (a, b) => new Date(notificationReceivedAt(b)) - new Date(notificationReceivedAt(a))
         );
         writeHistory(history);
         setHistoryNotifications(history);
+        await storeNotifications.getState().refresh({ announce: false });
         setLoading(false);
         return;
       } catch (e) {
@@ -92,6 +112,15 @@ const NotificationsView = () => {
     loadNotifications();
   }, []);
 
+  const handleGroupInvite = async (grupoId, action) => {
+    try {
+      await respondGroupInvite(grupoId, action);
+      await loadNotifications();
+    } catch (e) {
+      setError(e?.response?.data?.message || e?.response?.data?.msg || "No se pudo responder la invitación");
+    }
+  };
+
   const handleAction = async (fromUserId, action) => {
     try {
       await respondFriendRequest(fromUserId, action);
@@ -101,7 +130,15 @@ const NotificationsView = () => {
     }
   };
 
-  const notificationsToRender = tab === "history" ? historyNotifications : notifications;
+  const notificationsToRender =
+    tab === "history"
+      ? historyNotifications
+      : notifications
+          .map((item) => {
+            const stored = historyNotifications.find((h) => h._id === item._id);
+            return { ...item, receivedAt: stored?.receivedAt || item.createdAt };
+          })
+          .filter((item) => isSameLocalDay(notificationReceivedAt(item)));
 
   return (
     <section className="panel__dash">
@@ -137,7 +174,7 @@ const NotificationsView = () => {
 
       {!loading && !notificationsToRender.length ? (
         <ul className="list__dash">
-          <li>{tab === "history" ? "No hay historial de notificaciones." : "No tienes notificaciones pendientes."}</li>
+          <li>{tab === "history" ? "No hay historial de notificaciones." : "No tienes notificaciones de hoy."}</li>
         </ul>
       ) : (
         <div className="card_grid__dash">
@@ -146,7 +183,7 @@ const NotificationsView = () => {
               <p>{item.message}</p>
               {tab === "history" ? (
                 <p style={{ margin: "6px 0 0", fontSize: "0.82rem", opacity: 0.85 }}>
-                  Visto: {new Date(item.lastSeenAt || item.createdAt || Date.now()).toLocaleString()}
+                  Recibido: {new Date(notificationReceivedAt(item)).toLocaleString()}
                 </p>
               ) : null}
 
@@ -161,6 +198,37 @@ const NotificationsView = () => {
                   <button className="button__dash" type="button" onClick={() => handleAction(item.fromUser._id, "reject")}>
                     Rechazar
                   </button>
+                </div>
+              ) : null}
+
+              {item.type === "group_invite" ? (
+                <div className="group_invite_card__dash">
+                  {item.grupo?.imagen ? (
+                    <img src={item.grupo.imagen} alt="" className="group_invite_cover__dash" />
+                  ) : null}
+                  <strong>{item.grupo?.nombre || "Grupo"}</strong>
+                  <p className="group_invite_desc__dash">
+                    {item.grupo?.descripcion || "Este grupo no tiene descripción."}
+                  </p>
+                  {item.grupo?.tags?.length ? (
+                    <span className="group_invite_meta__dash">
+                      Intereses: {item.grupo.tags.join(", ")}
+                    </span>
+                  ) : null}
+                  <span className="group_invite_meta__dash">
+                    {item.grupo?.miembrosArray?.length || 0} miembros
+                    {item.fromUser?.nombre ? ` · Te invitó ${item.fromUser.nombre}` : ""}
+                  </span>
+                  {tab !== "history" && item.grupo?._id ? (
+                    <div className="friend_actions__dash">
+                      <button className="button__dash" type="button" onClick={() => handleGroupInvite(item.grupo._id, "reject")}>
+                        Rechazar
+                      </button>
+                      <button className="button__dash" type="button" onClick={() => handleGroupInvite(item.grupo._id, "accept")}>
+                        Unirme
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

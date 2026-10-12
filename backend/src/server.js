@@ -9,6 +9,7 @@ import automatizacionRouter from "./routers/automatizacion_routes.js";
 import postsRouter from "./routers/posts.routes.js";
 import chatRouter from "./routers/chat_routes.js";
 import eventosRouter from "./routers/eventos_routes.js";
+import recomendacionesRouter from "./routers/recomendaciones_routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -52,6 +53,7 @@ app.use("/api/automatizacion", automatizacionRouter);
 app.use("/api", postsRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/eventos", eventosRouter);
+app.use("/api/recomendaciones", recomendacionesRouter);
 
 app.use((req, res) => res.status(404).send("Endpoint no encontrado - 404"));
 

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Evento from "../models/Evento.js";
 import { extractStoredFilename, toPublicUploadUrl } from "../utils/mediaUrl.js";
+import { mergeTags } from "../utils/interests.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -30,6 +31,11 @@ const savePortadaIfBase64 = (portada, userId) => {
   return filename;
 };
 
+const isEventoCaducado = (fechaHora, now = Date.now()) => {
+  const fecha = fechaHora ? new Date(fechaHora) : null;
+  return !fecha || Number.isNaN(fecha.getTime()) || fecha.getTime() < now;
+};
+
 const mapEvento = (req, evento, meId = "") => {
   const source = typeof evento?.toObject === "function" ? evento.toObject() : evento;
   const asistentes = Array.isArray(source?.asistentes) ? source.asistentes : [];
@@ -45,6 +51,7 @@ const mapEvento = (req, evento, meId = "") => {
       : null,
     asistentesCount: asistentes.length,
     isAttending: asistentes.some((id) => toId(id) === meId),
+    isExpired: isEventoCaducado(source?.fechaHora),
   };
 };
 
@@ -82,6 +89,7 @@ const crearEvento = async (req, res) => {
       lugar = "",
       descripcionEvento = "",
       costo = "",
+      tags = [],
     } = req.body || {};
 
     if (![nombreEvento, fechaHora, lugar, descripcionEvento, costo].every((v) => String(v).trim())) {
@@ -101,6 +109,7 @@ const crearEvento = async (req, res) => {
       descripcionEvento: String(descripcionEvento).trim(),
       costo: String(costo).trim(),
       universidad,
+      tags: mergeTags(tags, nombreEvento, descripcionEvento, lugar),
       creador: req.usuario._id,
       asistentes: [],
       recordatoriosEnviados: [],
@@ -129,6 +138,9 @@ const toggleAsistire = async (req, res) => {
     if (!evento) return res.status(404).json({ msg: "Evento no encontrado." });
     if (evento.universidad !== universidad) {
       return res.status(403).json({ msg: "Solo puedes asistir eventos de tu universidad." });
+    }
+    if (isEventoCaducado(evento.fechaHora)) {
+      return res.status(400).json({ msg: "Este evento ya caducó y no admite asistencia." });
     }
 
     const meId = toId(req.usuario._id);
@@ -195,6 +207,7 @@ const actualizarEvento = async (req, res) => {
       lugar,
       descripcionEvento,
       costo,
+      tags,
     } = req.body || {};
 
     if (typeof nombreEvento === "string" && nombreEvento.trim()) evento.nombreEvento = nombreEvento.trim();
@@ -210,6 +223,13 @@ const actualizarEvento = async (req, res) => {
       }
       evento.fechaHora = fecha;
     }
+
+    evento.tags = mergeTags(
+      tags,
+      evento.nombreEvento,
+      evento.descripcionEvento,
+      evento.lugar
+    );
 
     await evento.save();
     await evento.populate("creador", "_id nombre avatar");
@@ -232,7 +252,6 @@ const notificacionesEventos = async (req, res) => {
       universidad,
       asistentes: meId,
       fechaHora: { $gt: now, $lte: nextDay },
-      recordatoriosEnviados: { $ne: meId },
     })
       .populate("creador", "_id nombre avatar")
       .sort({ fechaHora: 1 })
@@ -240,18 +259,13 @@ const notificacionesEventos = async (req, res) => {
 
     if (!eventos.length) return res.json([]);
 
-    await Evento.updateMany(
-      { _id: { $in: eventos.map((evento) => evento._id) } },
-      { $addToSet: { recordatoriosEnviados: meId } }
-    );
-
     const notifications = eventos.map((evento) => ({
       _id: `ev-${evento._id}-${toId(meId)}`,
       type: "event_reminder",
       eventId: evento._id,
       event: mapEvento(req, evento, toId(meId)),
       message: `Recordatorio: "${evento.nombreEvento}" es dentro de menos de 24 horas.`,
-      createdAt: new Date().toISOString(),
+      createdAt: now.toISOString(),
     }));
 
     res.json(notifications);

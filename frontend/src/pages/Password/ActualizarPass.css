@@ -188,3 +188,47 @@
   color: #008000;
   border-color: #c3f0c3;
 }
+
+[data-theme="dark"] .password-change-container {
+  background: transparent;
+}
+
+[data-theme="dark"] .password-change-card {
+  background-color: #161e2b;
+  color: #e6edf7;
+  border: 1px solid #2c3f55;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .main-username-title,
+[data-theme="dark"] .title {
+  color: #e6edf7;
+}
+
+[data-theme="dark"] .input-field {
+  background-color: #0f1622;
+  color: #e6edf7;
+  border-color: #3d5168;
+}
+
+[data-theme="dark"] .input-field:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 5px rgba(124, 58, 237, 0.3);
+}
+
+[data-theme="dark"] .cancel-btn {
+  background-color: #334155;
+  color: #e6edf7;
+}
+
+[data-theme="dark"] .save-btn {
+  background-color: #7c3aed;
+}
+
+[data-theme="dark"] .save-btn:hover {
+  background-color: #6d28d9;
+}
+
+[data-theme="dark"] .icon-circle {
+  border-color: #c4b5fd;
+}

@@ -14,7 +14,8 @@
 }
 .paso {
     width: 250px;
-    height: 300px;
+    min-height: 300px;
+    height: auto;
     background: white;
     padding: 20px;
     border-radius: 15px;
@@ -43,8 +44,14 @@
     color: #333;
 }
 @media (max-width: 768px) {
+    .explora-conecta {
+        padding: 32px 16px;
+        border-radius: 0;
+    }
     .paso {
         width: 100%;
+        max-width: 360px;
+        min-height: auto;
     }
 }
 

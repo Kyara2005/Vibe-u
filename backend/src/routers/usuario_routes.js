@@ -18,7 +18,8 @@ import {
     getFriendRequestNotifications,
     sendMatchLike,
     rejectMatchCandidate,
-    getMatchNotifications
+    getMatchNotifications,
+    listInvitePeople
 } from "../controllers/friend_controller.js";
 import fetch from "node-fetch";
 import { toPublicUploadUrl } from "../utils/mediaUrl.js";
@@ -54,14 +55,27 @@ const fetchJsonWithTimeout = async (url, timeoutMs = 4000) => {
     }
 };
 
+const stripQuoteMarkup = (text = "") =>
+    String(text)
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&amp;/gi, "&")
+        .replace(/\s+/g, " ")
+        .trim();
+
+const looksLikeMarkup = (text = "") => /<\s*(g|svg|path|div|span)\b/i.test(text);
+
 const translateToSpanish = async (text) => {
     if (!text) return null;
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|es`;
     const data = await fetchJsonWithTimeout(url, 4500);
     const translated = data?.responseData?.translatedText;
     if (!translated || typeof translated !== "string") return null;
-    const clean = translated.trim();
-    return clean || null;
+    const clean = stripQuoteMarkup(translated);
+    if (!clean || looksLikeMarkup(translated) || looksLikeMarkup(clean)) return null;
+    return clean;
 };
 
 const BLACKLISTED_DOMAINS = [
@@ -313,18 +327,25 @@ router.post("/reset-password/:token", async (req, res) => {
 router.get("/frase", async (req, res) => {
     try {
         if (fraseCache.value && Date.now() < fraseCache.expiresAt) {
-            return res.json(fraseCache.value);
+            const cachedQuote = stripQuoteMarkup(fraseCache.value?.q || "");
+            if (cachedQuote && !looksLikeMarkup(fraseCache.value?.q || "") && !looksLikeMarkup(cachedQuote)) {
+                return res.json({
+                    q: cachedQuote,
+                    a: stripQuoteMarkup(fraseCache.value?.a || "") || "Autor desconocido",
+                });
+            }
+            fraseCache = { value: null, expiresAt: 0 };
         }
 
         const zenData = await fetchJsonWithTimeout("https://zenquotes.io/api/random", 4000);
         const quote = Array.isArray(zenData) ? zenData[0] : null;
-        const rawQuote = typeof quote?.q === "string" ? quote.q.trim() : "";
-        const author = typeof quote?.a === "string" && quote.a.trim() ? quote.a.trim() : "Autor desconocido";
+        const rawQuote = stripQuoteMarkup(typeof quote?.q === "string" ? quote.q : "");
+        const author = stripQuoteMarkup(typeof quote?.a === "string" ? quote.a : "") || "Autor desconocido";
 
         let payload = null;
-        if (rawQuote) {
+        if (rawQuote && !looksLikeMarkup(rawQuote)) {
             const translated = await translateToSpanish(rawQuote);
-            payload = translated ? { q: translated, a: author } : null;
+            payload = { q: translated || rawQuote, a: author };
         }
 
         if (!payload) {
@@ -352,6 +373,7 @@ router.get("/match/candidatos", verificarTokenJWT, listMatchCandidates);
 router.post("/match/like", verificarTokenJWT, sendMatchLike);
 router.post("/match/reject", verificarTokenJWT, rejectMatchCandidate);
 router.get("/match/notificaciones", verificarTokenJWT, getMatchNotifications);
+router.get("/invitar-personas", verificarTokenJWT, listInvitePeople);
 router.get("/publico/:id", verificarTokenJWT, getPublicProfile);
 router.post("/amistad/solicitar", verificarTokenJWT, sendFriendRequest);
 router.post("/amistad/responder", verificarTokenJWT, respondFriendRequest);

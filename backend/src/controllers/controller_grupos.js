@@ -1,5 +1,7 @@
 import Grupo from '../models/Grupos.js';
+import Usuario from '../models/Usuario.js';
 import { extractStoredFilename, toPublicUploadUrl } from "../utils/mediaUrl.js";
+import { mergeTags } from "../utils/interests.js";
 
 const mapCommentMedia = (req, comment = {}) => ({
     ...comment,
@@ -35,8 +37,17 @@ export const crearGrupo = async (req, res) => {
             return res.status(401).json({ message: "No autenticado" });
         }
 
+        const nombre = String(req.body?.nombre || "").trim();
+        const descripcion = String(req.body?.descripcion || "").trim().slice(0, 400);
+        if (!nombre) {
+            return res.status(400).json({ message: "El nombre del grupo es obligatorio" });
+        }
+
         const nuevoGrupo = new Grupo({
-            ...req.body,
+            nombre,
+            imagen: req.body?.imagen || "",
+            descripcion,
+            tags: mergeTags(req.body?.tags, nombre, descripcion),
             creadorEmail: correoUsuario,
             miembrosArray: [correoUsuario],
         });
@@ -85,6 +96,200 @@ export const abandonarGrupo = async (req, res) => {
         res.json({ message: "Has abandonado el grupo" });
     } catch (error) {
         res.status(400).json({ message: "Error al abandonar" });
+    }
+};
+
+const esMiembroDelGrupo = (grupo, correo, rol) =>
+    rol === "administrador" || grupo.creadorEmail === correo || (grupo.miembrosArray || []).includes(correo);
+
+export const listarMiembros = async (req, res) => {
+    try {
+        const grupo = await Grupo.findById(req.params.id);
+        if (!grupo) return res.status(404).json({ message: "Grupo no encontrado" });
+
+        const usuarios = await Usuario.find({
+            correoInstitucional: { $in: grupo.miembrosArray || [] },
+        }).select("_id nombre avatar correoInstitucional universidad carrera");
+
+        const porCorreo = new Map(
+            usuarios.map((user) => [user.correoInstitucional, {
+                _id: user._id,
+                nombre: user.nombre,
+                avatar: toPublicUploadUrl(req, "avatars", user.avatar),
+                correoInstitucional: user.correoInstitucional,
+                universidad: user.universidad,
+                carrera: user.carrera,
+            }])
+        );
+
+        const miembros = (grupo.miembrosArray || []).map((correo) =>
+            porCorreo.get(correo) || {
+                _id: correo,
+                nombre: correo.split("@")[0],
+                avatar: "",
+                correoInstitucional: correo,
+                universidad: "",
+                carrera: "",
+            }
+        );
+
+        res.json(miembros);
+    } catch (error) {
+        res.status(400).json({ message: "Error al listar miembros" });
+    }
+};
+
+export const invitarMiembro = async (req, res) => {
+    try {
+        const correoInvitador = req.usuario?.correoInstitucional;
+        if (!correoInvitador) {
+            return res.status(401).json({ message: "No autenticado" });
+        }
+
+        const grupo = await Grupo.findById(req.params.id);
+        if (!grupo) return res.status(404).json({ message: "Grupo no encontrado" });
+
+        if (!esMiembroDelGrupo(grupo, correoInvitador, req.usuario?.rol)) {
+            return res.status(403).json({ message: "Solo los miembros pueden invitar." });
+        }
+
+        const { userId, correo } = req.body || {};
+        let email = typeof correo === "string" ? correo.trim().toLowerCase() : "";
+
+        if (userId) {
+            const usuario = await Usuario.findById(userId);
+            if (!usuario?.correoInstitucional) {
+                return res.status(404).json({ message: "Usuario no encontrado" });
+            }
+            email = usuario.correoInstitucional;
+
+            if (grupo.miembrosArray.includes(email)) {
+                return res.status(400).json({ message: "Esa persona ya es miembro del grupo." });
+            }
+
+            const alreadyInvited = (usuario.grupoInvitaciones || []).some(
+                (item) => item.grupo?.toString() === grupo._id.toString()
+            );
+            if (alreadyInvited) {
+                return res.status(400).json({ message: "Ya tiene una invitación pendiente." });
+            }
+
+            usuario.grupoInvitaciones = [
+                ...(usuario.grupoInvitaciones || []),
+                { grupo: grupo._id, fromUser: req.usuario._id, createdAt: new Date() },
+            ];
+            await usuario.save();
+            return res.json({ message: `Invitación enviada a ${usuario.nombre}.` });
+        }
+
+        if (!email) {
+            return res.status(400).json({ message: "Selecciona un usuario para invitar." });
+        }
+
+        if (grupo.miembrosArray.includes(email)) {
+            return res.status(400).json({ message: "Esa persona ya es miembro del grupo." });
+        }
+
+        const usuarioPorCorreo = await Usuario.findOne({ correoInstitucional: email });
+        if (!usuarioPorCorreo) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+        const alreadyInvited = (usuarioPorCorreo.grupoInvitaciones || []).some(
+            (item) => item.grupo?.toString() === grupo._id.toString()
+        );
+        if (alreadyInvited) {
+            return res.status(400).json({ message: "Ya tiene una invitación pendiente." });
+        }
+        usuarioPorCorreo.grupoInvitaciones = [
+            ...(usuarioPorCorreo.grupoInvitaciones || []),
+            { grupo: grupo._id, fromUser: req.usuario._id, createdAt: new Date() },
+        ];
+        await usuarioPorCorreo.save();
+        res.json({ message: `Invitación enviada a ${usuarioPorCorreo.nombre}.` });
+    } catch (error) {
+        res.status(400).json({ message: "Error al invitar" });
+    }
+};
+
+export const listarInvitacionesGrupo = async (req, res) => {
+    try {
+        const me = await Usuario.findById(req.usuario._id)
+            .select("grupoInvitaciones")
+            .populate("grupoInvitaciones.grupo", "nombre imagen descripcion miembrosArray tags")
+            .populate("grupoInvitaciones.fromUser", "nombre avatar")
+            .lean();
+
+        const items = (me?.grupoInvitaciones || [])
+            .filter((item) => item.grupo?._id)
+            .map((item) => {
+                const grupo = mapGroupMedia(req, item.grupo);
+                const fromUser = item.fromUser
+                    ? {
+                        _id: item.fromUser._id,
+                        nombre: item.fromUser.nombre,
+                        avatar: toPublicUploadUrl(req, "avatars", item.fromUser.avatar),
+                    }
+                    : null;
+                return {
+                    _id: `ginv-${grupo._id}`,
+                    type: "group_invite",
+                    grupo,
+                    fromUser,
+                    message: `${fromUser?.nombre || "Alguien"} te invitó al grupo ${grupo.nombre}`,
+                    createdAt: item.createdAt || new Date(),
+                };
+            });
+
+        res.json(items);
+    } catch {
+        res.status(500).json({ message: "Error al listar invitaciones" });
+    }
+};
+
+export const responderInvitacionGrupo = async (req, res) => {
+    try {
+        const { grupoId } = req.params;
+        const action = String(req.body?.action || "").toLowerCase();
+        const correo = req.usuario?.correoInstitucional;
+        if (!correo) return res.status(401).json({ message: "No autenticado" });
+        if (!["accept", "reject"].includes(action)) {
+            return res.status(400).json({ message: "Acción inválida." });
+        }
+
+        const me = await Usuario.findById(req.usuario._id);
+        if (!me) return res.status(404).json({ message: "Usuario no encontrado" });
+
+        const tieneInvitacion = (me.grupoInvitaciones || []).some(
+            (item) => item.grupo?.toString() === String(grupoId)
+        );
+        if (!tieneInvitacion) {
+            return res.status(404).json({ message: "No tienes una invitación pendiente." });
+        }
+
+        if (action === "accept") {
+            const grupo = await Grupo.findById(grupoId);
+            if (!grupo) {
+                me.grupoInvitaciones = (me.grupoInvitaciones || []).filter(
+                    (item) => item.grupo?.toString() !== String(grupoId)
+                );
+                await me.save();
+                return res.status(404).json({ message: "El grupo ya no existe." });
+            }
+            if (!grupo.miembrosArray.includes(correo)) {
+                grupo.miembrosArray.push(correo);
+                await grupo.save();
+            }
+        }
+
+        me.grupoInvitaciones = (me.grupoInvitaciones || []).filter(
+            (item) => item.grupo?.toString() !== String(grupoId)
+        );
+        await me.save();
+        res.json({
+            message: action === "accept" ? "Te uniste al grupo." : "Invitación rechazada.",
+        });
+    } catch {
+        res.status(400).json({ message: "Error al responder la invitación" });
     }
 };
 

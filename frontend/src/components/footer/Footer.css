@@ -1,5 +1,6 @@
 footer {
     padding: 2rem 1rem;
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
     background: linear-gradient(90deg, #6C0063, #D6006D);
     color: white;
     text-align: center;

@@ -1,0 +1,27 @@
+.admin-shell {
+  min-height: 100dvh;
+}
+
+.admin-shell-content {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.admin-shell-content .gestion-usuarios-seccion,
+.admin-shell-content .gauto-container,
+.admin-shell-content .gmod-section {
+  min-height: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 770px) {
+  .admin-shell-content .gestion-usuarios-seccion {
+    padding: 12px 8px 20px;
+  }
+
+  .admin-shell-content .gauto-container,
+  .admin-shell-content .gmod-section {
+    padding: 12px 8px 20px;
+  }
+}

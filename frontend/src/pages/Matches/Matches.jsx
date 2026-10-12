@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { IoArrowBack } from "react-icons/io5";
+import { FaBell } from "react-icons/fa";
+import storeNotifications from "../../context/storeNotifications";
+import NotifBadge from "../../components/notifications/NotifBadge";
+import "../../components/notifications/NotificationAlerts.css";
 import {
   getMatchCandidates,
+  rejectMatchCandidate,
   sendMatchLike,
 } from "../../Services/users";
 import { resolveAvatarUrl } from "../../utils/mediaUrl";
@@ -9,7 +15,7 @@ import "./Matches.css";
 
 const DEFAULT_AVATAR = "/default-avatar.svg";
 const TEMP_REJECT_STORAGE_KEY = "matches_temp_reject_until_by_user";
-const SWIPE_RESHOW_DELAY_MS = 10 * 60 * 1000;
+const SWIPE_RESHOW_DELAY_MS = 24 * 60 * 60 * 1000;
 
 const cleanExpiredRejects = (rejects = {}) => {
   const now = Date.now();
@@ -55,6 +61,7 @@ const Matches = () => {
   const [matchModalOpen, setMatchModalOpen] = useState(false);
   const [matchedUserId, setMatchedUserId] = useState("");
   const navigate = useNavigate();
+  const unreadCount = storeNotifications((state) => state.unreadCount);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 768);
@@ -106,20 +113,22 @@ const Matches = () => {
     }
   }, [suggestedUsers, currentIndex]);
 
-  const handleReject = async (userId, options = {}) => {
-    const { temporary = true } = options;
+  const handleReject = async (userId) => {
     if (processing || !userId) return;
-
-    if (!temporary) return;
     const expiresAt = Date.now() + SWIPE_RESHOW_DELAY_MS;
     setTempRejects((prev) => ({
       ...cleanExpiredRejects(prev),
       [userId]: expiresAt,
     }));
-    setSwipeHint("Te lo mostramos luego");
+    setSwipeHint("Lo verás de nuevo en 1 día");
     setTimeout(() => {
       setSwipeHint("");
-    }, 220);
+    }, 900);
+    try {
+      await rejectMatchCandidate(userId);
+    } catch {
+      // El perfil se oculta localmente y reaparece al cumplirse el día.
+    }
   };
 
   const closeMatchModal = () => {
@@ -189,7 +198,7 @@ const Matches = () => {
     if (dragX >= threshold) {
       handleLike(userId);
     } else if (dragX <= -threshold) {
-      handleReject(userId, { temporary: true });
+      handleReject(userId);
     }
     setDragX(0);
     setTouchStartX(null);
@@ -200,13 +209,27 @@ const Matches = () => {
 
   return (
     <section className="matches-section">
-      <button className="back-btn" onClick={() => navigate(-1)}>
-        Volver
-      </button>
-      <h2 className="matches-title">Tus posibles matches</h2>
-      <p className="matches-subtitle">
-        Desliza a la derecha para dar like. Si es mutuo, se abre el chat.
-      </p>
+      <header className="matches-topbar">
+        <button className="matches-back-btn" type="button" onClick={() => navigate(-1)} aria-label="Volver">
+          <IoArrowBack size={22} />
+        </button>
+        <div className="matches-heading">
+          <h2 className="matches-title">Tus posibles matches</h2>
+          <p className="matches-subtitle">
+            Desliza a la derecha para dar like. Si es mutuo, se abre el chat.
+          </p>
+        </div>
+        <button
+          className="matches-back-btn"
+          type="button"
+          onClick={() => navigate("/dashboard/notificaciones")}
+          aria-label="Notificaciones"
+          style={{ position: "relative" }}
+        >
+          <FaBell />
+          <NotifBadge count={unreadCount} />
+        </button>
+      </header>
 
       {loading ? <p className="matches-state">Cargando usuarios...</p> : null}
       {error ? <p className="matches-state matches-error">{error}</p> : null}

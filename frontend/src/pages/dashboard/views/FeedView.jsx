@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
 import { Feed } from "../UserDashboard";
+import Recommendations from "../../../components/recommendations/Recommendations";
+
+const sanitizeQuoteText = (text = "") =>
+  String(text)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
 
 const FeedView = () => {
   const [quote, setQuote] = useState(null);
@@ -9,7 +20,9 @@ const FeedView = () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/usuarios/frase`);
         const data = await res.json();
-        if (data?.q) setQuote(data);
+        const cleanQuote = sanitizeQuoteText(data?.q || "");
+        const cleanAuthor = sanitizeQuoteText(data?.a || "");
+        if (cleanQuote) setQuote({ q: cleanQuote, a: cleanAuthor });
       } catch {
         setQuote(null);
       }
@@ -28,6 +41,7 @@ const FeedView = () => {
           </p>
         ) : null}
       </section>
+      <Recommendations variant="hub" />
       <Feed />
     </section>
   );

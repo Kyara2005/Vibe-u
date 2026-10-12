@@ -6,6 +6,7 @@
 .contact h2 {
   color: #FF0080;
   margin-bottom: 1rem;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
 }
 .contact__form-container {
   display: flex;
@@ -56,31 +57,61 @@
 }
 .checkbox__label {
   color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  line-height: 1.4;
 }
 @media (max-width: 768px) {
+  .contact {
+    padding: 2.5rem 1rem;
+  }
   .contact__form-container {
     flex-direction: column; 
-    align-items: center;
-    gap: 2rem;
+    align-items: stretch;
+    gap: 1.5rem;
+    margin-top: 20px;
   }
   .contact form {
-    width: 90%;
+    width: 100%;
     max-width: 100%;
   }
   .contact__img {
     display: none;    
   }
-  .contact h2 {
-    font-size: 1.5rem;
-  }
   .contact input,
   .contact textarea,
   .contact button {
-    font-size: 1rem;
-    padding: 0.75rem;
+    width: 100%;
+    font-size: 16px;
+    padding: 0.85rem;
+  }
+  .checkbox__label {
+    justify-content: center;
+    text-align: center;
   }
 }
 
 [data-theme="dark"] .contact {
     background: linear-gradient(90deg, #0F1115, #441952b7);
+}
+
+[data-theme="dark"] .contact input,
+[data-theme="dark"] .contact textarea {
+    background-color: #1a1d27;
+    color: #e6edf7;
+    border-color: #6b5a7a;
+}
+
+[data-theme="dark"] .contact input::placeholder,
+[data-theme="dark"] .contact textarea::placeholder {
+    color: #a8b0bd;
+}
+
+[data-theme="dark"] .checkbox__label {
+    color: #e6edf7;
 }

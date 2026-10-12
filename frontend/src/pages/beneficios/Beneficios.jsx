@@ -1,6 +1,7 @@
 import React from 'react';
 import './Beneficios.css';
 import { useNavigate } from 'react-router';
+import ThemeToggle from '../../components/theme/ThemeToggle';
 
 const Beneficios = () => {
     const navigate = useNavigate();
@@ -9,6 +10,7 @@ const Beneficios = () => {
     };
     return (
         <section className="beneficios-section">
+            <ThemeToggle />
             <h2 className="beneficios-title">Beneficios de Unirte a Vibe-U 🎓</h2>
             <p className="beneficios-subtitulo">
                 Conéctate con tu comunidad universitaria de una manera segura y auténtica.

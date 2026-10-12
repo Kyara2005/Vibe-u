@@ -263,3 +263,94 @@
 [data-theme="dark"] .btn-modal-confirm-del {
   background: #b91c1c;
 }
+
+@media (max-width: 770px) {
+  .gestion-usuarios-seccion {
+    padding: 16px 12px 24px;
+  }
+
+  .gestion-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 14px;
+  }
+
+  .gestion-input-search {
+    max-width: 100%;
+  }
+
+  .gestion-tabla-wrapper {
+    background: transparent;
+    box-shadow: none;
+    border: 0;
+    overflow: visible;
+  }
+
+  .gestion-table thead {
+    display: none;
+  }
+
+  .gestion-table,
+  .gestion-table tbody,
+  .gestion-table tr,
+  .gestion-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .gestion-table tr {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+
+  .gestion-table td {
+    padding: 8px 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .gestion-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .gestion-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+    margin-bottom: 4px;
+  }
+
+  .actions-cell {
+    flex-wrap: wrap;
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .btn-promote,
+  .btn-downgrade,
+  .btn-delete {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .modal-card {
+    width: calc(100% - 24px);
+    padding: 22px 16px;
+  }
+
+  .modal-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+[data-theme="dark"] .gestion-table tr {
+  background: #161e2b;
+  border-color: #2c3f55;
+}

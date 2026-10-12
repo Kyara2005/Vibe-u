@@ -6,6 +6,9 @@ import {
   getMessagesWithUser,
   sendMessageToUser,
 } from "../../../Services/chat";
+import storeNotifications from "../../../context/storeNotifications";
+import NotifBadge from "../../../components/notifications/NotifBadge";
+import "../../../components/notifications/NotificationAlerts.css";
 
 const formatTime = (isoDate) => {
   if (!isoDate) return "";
@@ -60,13 +63,16 @@ const ChatView = () => {
     setConversations(Array.isArray(data) ? data : []);
   };
 
-  const loadMessagesForUser = async (userId) => {
+  const loadMessagesForUser = async (userId, { syncUnread = false } = {}) => {
     if (!userId) return;
     const { data } = await getMessagesWithUser(userId);
     const nextMessages = Array.isArray(data?.messages) ? data.messages : [];
     setMessages((prevMessages) =>
       areMessagesEqual(prevMessages, nextMessages) ? prevMessages : nextMessages
     );
+    if (syncUnread) {
+      storeNotifications.getState().refreshChat();
+    }
   };
 
   const loadInitialData = async () => {
@@ -112,6 +118,7 @@ const ChatView = () => {
         user: conversation.otherUser,
         lastMessage: conversation.lastMessage || "Inicia una conversacion",
         lastMessageAt: conversation.lastMessageAt || conversation.updatedAt || "",
+        unreadCount: conversation.unreadCount || 0,
         hasConversation: true,
       }));
 
@@ -121,6 +128,7 @@ const ChatView = () => {
         user,
         lastMessage: "Inicia una conversacion",
         lastMessageAt: "",
+        unreadCount: 0,
         hasConversation: false,
       }));
 
@@ -138,7 +146,7 @@ const ChatView = () => {
   }, [activeUserId, recents]);
 
   useEffect(() => {
-    loadMessagesForUser(activeUserId).catch(() => {
+    loadMessagesForUser(activeUserId, { syncUnread: true }).catch(() => {
       setMessages([]);
     });
   }, [activeUserId]);
@@ -228,7 +236,10 @@ const ChatView = () => {
           >
             <div className="chat_item_row__dash">
               <strong>{item.user.nombre}</strong>
-              <span>{item.lastMessageAt ? formatTime(item.lastMessageAt) : ""}</span>
+              <span className="chat_item_meta__dash">
+                {item.unreadCount > 0 ? <NotifBadge count={item.unreadCount} /> : null}
+                {item.lastMessageAt ? formatTime(item.lastMessageAt) : ""}
+              </span>
             </div>
             <p>{item.lastMessage}</p>
           </button>

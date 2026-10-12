@@ -1,14 +1,66 @@
 .contacto-section {
     font-family: 'Poppins', sans-serif;
     background: #f0f4f8;
-    padding: 80px 20px;
+    padding: 80px 20px 48px;
+    padding-top: max(80px, calc(env(safe-area-inset-top) + 64px));
     text-align: center;
+    min-height: 100dvh;
+    position: relative;
+    overflow: hidden;
+}
+.contacto-stars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+.contacto-star {
+    position: absolute;
+    display: block;
+    background: linear-gradient(180deg, #fff7ae 0%, #c4b5fd 100%);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    filter: drop-shadow(0 0 6px rgba(196, 181, 253, 0.85));
+    animation-name: starTwinkle, starFloat;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    opacity: 0.85;
+}
+.contacto-section > :not(.contacto-stars):not(.theme_toggle_global):not(.contacto-back-btn) {
+    position: relative;
+    z-index: 1;
+}
+.contacto-back-btn {
+    position: fixed;
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    width: 42px;
+    height: 42px;
+    background: rgba(15, 23, 42, 0.7);
+    color: #f8fafc;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    z-index: 2000;
+    backdrop-filter: blur(6px);
+}
+.contacto-back-btn:hover {
+    transform: scale(1.06);
+}
+[data-theme="light"] .contacto-back-btn {
+    border-color: rgba(30, 41, 59, 0.25);
+    background: rgba(255, 255, 255, 0.92);
+    color: #0f172a;
 }
 .contacto-title {
-    font-size: 2.8em;
+    font-size: clamp(1.6rem, 5vw, 2.8em);
     color: #4a4e69;
     margin-bottom: 10px;
     animation: fadeInDown 1s ease-in-out;
+    padding: 0 8px;
 }
 .subtitulo {
     font-size: 1.2em;
@@ -18,7 +70,7 @@
 }
 .imagen-grupal-container {
     width: 100%;
-    max-width: 800px; 
+    max-width: 420px;
     margin: 0 auto 50px auto; 
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -27,14 +79,15 @@
 }
 .imagen-grupal {
     width: 100%;
-    height: 700px;
+    height: auto;
+    object-fit: contain;
     display: block;
 }
 .equipo-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 30px;
-    max-width: 1200px;
+    max-width: 720px;
     margin: 0 auto;
 }
 .miembro-card {
@@ -63,6 +116,15 @@
 .miembro-card h3 {
     font-size: 1.5em;
     color: #4a4e69;
+    margin-bottom: 6px;
+}
+.miembro-rol {
+    display: inline-block;
+    color: #7663e0;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.82em;
     margin-bottom: 10px;
 }
 .miembro-card p {
@@ -132,17 +194,110 @@
         transform: scale(1);
     }
 }
+@keyframes starTwinkle {
+    0%, 100% {
+        opacity: 0.25;
+        transform: scale(0.55) rotate(0deg);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.25) rotate(18deg);
+    }
+}
+@keyframes starFloat {
+    0%, 100% {
+        translate: 0 0;
+    }
+    50% {
+        translate: 0 -8px;
+    }
+}
+[data-theme="dark"] .contacto-section {
+    background: linear-gradient(90deg, #0F1115, #441952b7);
+}
+
+[data-theme="dark"] .contacto-title,
+[data-theme="dark"] .miembro-card h3,
+[data-theme="dark"] .contacto-info h3 {
+    color: #e6edf7;
+}
+
+[data-theme="dark"] .subtitulo,
+[data-theme="dark"] .miembro-card p,
+[data-theme="dark"] .contacto-info p {
+    color: #c5cdd8;
+}
+
+[data-theme="dark"] .miembro-rol {
+    color: #e9d5ff;
+}
+
+[data-theme="dark"] .contacto-star {
+    background: linear-gradient(180deg, #fff 0%, #f5d0fe 55%, #c4b5fd 100%);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.75));
+}
+
+[data-theme="dark"] .miembro-card,
+[data-theme="dark"] .contacto-info {
+    background-color: #1a1d27;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .contacto-info a {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .contacto-info a:hover {
+    color: #e9d5ff;
+}
+
 @media (max-width: 768px) {
+    .contacto-section {
+        padding: 72px 14px 32px;
+    }
     .contacto-title {
-        font-size: 2em;
+        font-size: 1.7rem;
     }
     .subtitulo {
-        font-size: 1em;
+        font-size: 0.95rem;
+        margin-bottom: 28px;
+        padding: 0 4px;
+    }
+    .imagen-grupal-container {
+        max-width: 320px;
+        margin-bottom: 28px;
+        border-radius: 14px;
     }
     .equipo-container {
-        grid-template-columns: 1fr; 
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .miembro-card {
+        padding: 22px 16px;
+    }
+    .miembro-foto {
+        width: 120px;
+        height: 120px;
+    }
+    .contacto-star:nth-child(n + 14) {
+        display: none;
     }
     .contacto-info {
-        box-sizing: border-box;
+        margin-top: 32px;
+        padding: 24px 16px;
+    }
+    .contacto-info h3 {
+        font-size: 1.4rem;
+    }
+    .contacto-info p {
+        font-size: 1rem;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .contacto-star {
+        animation: none;
+        opacity: 0.7;
     }
 }

@@ -37,6 +37,9 @@ export const getFriendNotifications = () =>
 export const getModerationNotifications = () =>
   axios.get("/usuarios/moderacion/notificaciones", getAuthConfig());
 
+export const getInvitePeople = () =>
+  axios.get("/usuarios/invitar-personas", getAuthConfig());
+
 export const getMatchCandidates = () =>
   axios.get("/usuarios/match/candidatos", getAuthConfig());
 

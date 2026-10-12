@@ -21,12 +21,21 @@ const usuarioSchema = new mongoose.Schema({
   descripcion: { type: String, default: "" },
   universidad: { type: String, default: "" },
   carrera: { type: String, default: "" },
+  intereses: { type: [String], default: [] },
+  perfilPublico: { type: Boolean, default: true },
+  grupoInvitaciones: [
+    {
+      grupo: { type: mongoose.Schema.Types.ObjectId, ref: "Grupo" },
+      fromUser: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario" },
+      createdAt: { type: Date, default: Date.now },
+    },
+  ],
   amigos: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
   solicitudesEnviadas: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
   solicitudesRecibidas: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
   matchLikesEnviados: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
   matchLikesRecibidos: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
-  matchRechazados: [{ type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }],
+  matchRechazados: { type: [mongoose.Schema.Types.Mixed], default: [] },
   matchNotificaciones: [
     {
       type: {

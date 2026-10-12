@@ -1,14 +1,17 @@
 .eventos-section {
     font-family: 'Poppins', sans-serif;
     background-color: #f8f9fa;
-    padding: 10px 15px;
+    padding: 24px 15px 40px;
+    padding-top: max(24px, calc(env(safe-area-inset-top) + 56px));
     text-align: center;
-    overflow: hidden; 
+    overflow: hidden;
+    min-height: 100dvh;
 }
 .slider-title {
-    font-size: 2.5em;
+    font-size: clamp(1.5rem, 5vw, 2.5em);
     color: #4a4e69;
     margin-bottom: 10px;
+    padding: 0 8px;
 }
 .slider-subtitle {
     font-size: 1.1em;
@@ -35,6 +38,7 @@
 }
 .slide-card {
     width: 300px;
+    flex: 0 0 300px;
     background-color: white;
     border-radius: 15px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -72,22 +76,60 @@
         transform: translateX(calc(-50% - 10px)); /* Desplaza exactamente la mitad del contenido */
     }
 }
+[data-theme="dark"] .eventos-section {
+    background: linear-gradient(90deg, #0F1115, #441952b7);
+}
+
+[data-theme="dark"] .slider-title {
+    color: #e6edf7;
+}
+
+[data-theme="dark"] .slider-subtitle {
+    color: #c5cdd8;
+}
+
+[data-theme="dark"] .slide-card {
+    background-color: #1a1d27;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .slide-card-title {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .slide-description {
+    color: #c5cdd8;
+}
+
 @media (max-width: 768px) {
+    .eventos-section {
+        padding: 72px 12px 32px;
+    }
     .slider-title {
-        font-size: 2em;
+        font-size: 1.6rem;
     }
     .slider-subtitle {
-        font-size: 0.9em;
+        font-size: 0.95em;
+        margin-bottom: 24px;
+        padding: 0 4px;
     }
     .slider-inner {
-        width: calc((250px + 15px) * 8); 
-        animation-duration: 30s; 
+        gap: 12px;
+        width: calc((220px + 12px) * 8);
+        animation-duration: 28s;
     }
     .slide-card {
-        width: 250px;
-        padding: 15px;
+        width: 220px;
+        flex: 0 0 220px;
+        padding: 14px;
+    }
+    .slide-image {
+        height: 140px;
+    }
+    .slide-card-title {
+        font-size: 1.15em;
     }
     .slider-container:hover .slider-inner {
-        animation-play-state: running; /* Deshabilitamos la pausa al pasar el mouse en móviles */
+        animation-play-state: running;
     }
 }

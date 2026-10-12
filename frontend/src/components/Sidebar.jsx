@@ -18,6 +18,9 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { isMobileAccess } from "../utils/mobileAccess";
+import storeNotifications from "../context/storeNotifications";
+import NotifBadge from "./notifications/NotifBadge";
+import "./notifications/NotificationAlerts.css";
 
 const Sidebar = () => {
   const navClass = ({ isActive }) =>
@@ -30,6 +33,8 @@ const Sidebar = () => {
 
   const [isMobileUser, setIsMobileUser] = useState(isMobileAccess());
   const [isOpen, setIsOpen] = useState(false);
+  const unreadCount = storeNotifications((state) => state.unreadCount);
+  const chatUnreadCount = storeNotifications((state) => state.chatUnreadCount);
 
   useEffect(() => {
     const onResize = () => {
@@ -61,6 +66,7 @@ const Sidebar = () => {
             aria-label={isOpen ? "Cerrar menu" : "Abrir menu"}
           >
             {isOpen ? <FaTimes /> : <FaBars />}
+            {!isOpen ? <NotifBadge count={unreadCount} /> : null}
           </button>
         </div>
 
@@ -77,7 +83,11 @@ const Sidebar = () => {
               <FaRobot /> Moderacion IA
             </NavLink>
             <NavLink className={adminNavClass} to="/dashboard/notificaciones" onClick={handleNavClick}>
-              <FaBell /> Notificaciones
+              <span className="notif_icon_wrap">
+                <FaBell />
+                <NotifBadge count={unreadCount} />
+              </span>
+              Notificaciones
             </NavLink>
             <NavLink className={adminNavClass} to="/dashboard/micuenta" onClick={handleNavClick}>
               <FaIdBadge /> Mi cuenta
@@ -108,6 +118,7 @@ const Sidebar = () => {
           aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
         >
           {isOpen ? <FaTimes /> : <FaBars />}
+          {!isOpen ? <NotifBadge count={unreadCount} /> : null}
         </button>
       </div>
 
@@ -122,7 +133,11 @@ const Sidebar = () => {
             <FaPlusCircle /> Publicar
           </NavLink>
           <NavLink className={navClass} to="/dashboard/chat" onClick={handleNavClick}>
-            <FaComments /> Chat
+            <span className="notif_icon_wrap">
+              <FaComments />
+              <NotifBadge count={chatUnreadCount} />
+            </span>
+            Chat
           </NavLink>
           <NavLink className={navClass} to="/dashboard/eventos" onClick={handleNavClick}>
             <FaCalendarAlt /> Eventos U
@@ -134,7 +149,11 @@ const Sidebar = () => {
             <FaIdBadge /> Mi cuenta
           </NavLink>
           <NavLink className={navClass} to="/dashboard/notificaciones" onClick={handleNavClick}>
-            <FaBell /> Notificaciones
+            <span className="notif_icon_wrap">
+              <FaBell />
+              <NotifBadge count={unreadCount} />
+            </span>
+            Notificaciones
           </NavLink>
           <NavLink className={navClass} to="/dashboard/ajustes" onClick={handleNavClick}>
             <FaCog /> Ajustes

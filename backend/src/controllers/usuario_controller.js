@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { mapAvatarToPublicUrl, extractStoredFilename, toPublicUploadUrl } from "../utils/mediaUrl.js";
+import { sanitizeInterests } from "../utils/interests.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -185,7 +186,7 @@ const perfil = (req, res) => {
 const actualizarUsuario = async (req, res) => {
     try {
         const { id } = req.params; // Si admin quiere actualizar a otro usuario
-        const { nombre, telefono, direccion, cedula, descripcion, universidad, carrera, avatar, rol } = req.body;
+        const { nombre, telefono, direccion, cedula, descripcion, universidad, carrera, avatar, rol, intereses, perfilPublico } = req.body;
 
         const idAActualizar = id || req.usuario._id;
         const usuarioBDD = await Usuario.findById(idAActualizar);
@@ -198,6 +199,8 @@ const actualizarUsuario = async (req, res) => {
         usuarioBDD.descripcion = descripcion || usuarioBDD.descripcion;
         usuarioBDD.universidad = universidad || usuarioBDD.universidad;
         usuarioBDD.carrera = carrera || usuarioBDD.carrera;
+        if (Array.isArray(intereses)) usuarioBDD.intereses = sanitizeInterests(intereses);
+        if (typeof perfilPublico === "boolean") usuarioBDD.perfilPublico = perfilPublico;
         usuarioBDD.avatar = saveAvatarIfBase64(avatar, usuarioBDD._id) || usuarioBDD.avatar;
 
         // Solo administradores pueden cambiar roles
@@ -221,7 +224,7 @@ const actualizarUsuario = async (req, res) => {
 };
 
 /* =========================================
-   🔵 ACTUALIZAR PASSWORD
+   🔵 ACTUALIZAR CONTRASEÑA
 ========================================= */
 const actualizarPassword = async (req, res) => {
     try {
@@ -229,14 +232,14 @@ const actualizarPassword = async (req, res) => {
         const usuarioBDD = await Usuario.findById(req.usuario._id);
 
         const isMatch = await usuarioBDD.matchPassword(oldPassword);
-        if (!isMatch) return res.status(400).json({ msg: "Password actual incorrecto" });
+        if (!isMatch) return res.status(400).json({ msg: "Contraseña actual incorrecta" });
 
         usuarioBDD.password = await usuarioBDD.encryptPassword(newPassword);
         await usuarioBDD.save();
 
-        res.status(200).json({ msg: "Password actualizado" });
+        res.status(200).json({ msg: "Contraseña actualizada" });
     } catch (error) {
-        res.status(500).json({ msg: "Error al actualizar password" });
+        res.status(500).json({ msg: "Error al actualizar contraseña" });
     }
 };
 

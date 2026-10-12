@@ -2,6 +2,7 @@ import React from "react";
 import "./Eventos.css";
 import evento1 from '../../assets/grupo-eventos.png';
 import evento2 from '../../assets/comparte-ideas.png';
+import ThemeToggle from '../../components/theme/ThemeToggle';
 
 const eventosData = [
     {
@@ -32,6 +33,7 @@ const Eventos = () => {
 
     return (
         <section className="eventos-section">
+            <ThemeToggle />
             <h2 className="slider-title">Descubre lo mejor de tu vida universitaria</h2>
             <p className="slider-subtitle">Vibe-U te mantiene al tanto de todo lo que sucede en tu campus. ¡Desplázate para ver!</p>
             <div className="slider-container">

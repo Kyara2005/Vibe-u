@@ -4,12 +4,40 @@ import Post from "../models/Post.js";
 import Grupo from "../models/Grupos.js";
 import { mapAvatarToPublicUrl, mapPostMediaToPublicUrl } from "../utils/mediaUrl.js";
 
-const PUBLIC_USER_FIELDS = "nombre avatar descripcion universidad carrera rol correoInstitucional";
+const PUBLIC_USER_FIELDS = "nombre avatar descripcion universidad carrera rol correoInstitucional perfilPublico";
 
 const removeId = (arr = [], id) => arr.filter((item) => item.toString() !== id.toString());
 const hasId = (arr = [], id) => (arr || []).some((item) => item.toString() === id.toString());
 const pushUniqueId = (arr = [], id) => (hasId(arr, id) ? arr : [...arr, id]);
 const trimNotifications = (arr = []) => arr.slice(0, 120);
+const MATCH_REJECT_TTL_MS = 24 * 60 * 60 * 1000;
+
+const rejectEntryId = (item) => {
+  if (!item) return "";
+  if (item.user) return item.user.toString();
+  return item.toString();
+};
+
+const getActiveRejectedIds = (rechazados = [], now = Date.now()) => {
+  const ids = new Set();
+  for (const item of rechazados || []) {
+    const id = rejectEntryId(item);
+    if (!id) continue;
+    const rejectedAt = item?.rejectedAt ? new Date(item.rejectedAt).getTime() : NaN;
+    if (Number.isNaN(rejectedAt)) continue;
+    if (now - rejectedAt < MATCH_REJECT_TTL_MS) ids.add(id);
+  }
+  return ids;
+};
+
+const upsertReject = (rechazados = [], userId) => {
+  const id = userId.toString();
+  const filtered = (rechazados || []).filter((item) => rejectEntryId(item) !== id);
+  return [...filtered, { user: userId, rejectedAt: new Date() }];
+};
+
+const removeReject = (rechazados = [], userId) =>
+  (rechazados || []).filter((item) => rejectEntryId(item) !== userId.toString());
 
 const getFriendStatus = (viewer, targetId) => {
   const meId = viewer._id.toString();
@@ -31,11 +59,29 @@ const searchUsers = async (req, res) => {
       confirmEmail: true,
       nombre: { $regex: `^${query}`, $options: "i" },
     })
-      .select("_id nombre avatar universidad carrera")
+      .select("_id nombre avatar universidad carrera perfilPublico")
       .limit(8)
       .lean();
 
-    res.json(users.map((user) => mapAvatarToPublicUrl(req, user)));
+    res.json(users.map((user) => {
+      const mapped = mapAvatarToPublicUrl(req, user);
+      if (mapped.perfilPublico === false) {
+        return {
+          _id: mapped._id,
+          nombre: mapped.nombre,
+          avatar: mapped.avatar,
+          perfilPublico: false,
+        };
+      }
+      return {
+        _id: mapped._id,
+        nombre: mapped.nombre,
+        avatar: mapped.avatar,
+        universidad: mapped.universidad,
+        carrera: mapped.carrera,
+        perfilPublico: true,
+      };
+    }));
   } catch {
     res.status(500).json({ msg: "Error al buscar usuarios" });
   }
@@ -49,16 +95,19 @@ const listMatchCandidates = async (req, res) => {
 
     const meId = req.usuario._id.toString();
     const incomingIds = (me?.matchLikesRecibidos || []).map((id) => id.toString());
+    const rejectedIds = getActiveRejectedIds(me?.matchRechazados);
 
     const excluded = new Set([
       meId,
       ...(me?.amigos || []).map((id) => id.toString()),
       ...(me?.matchLikesEnviados || []).map((id) => id.toString()),
+      ...rejectedIds,
     ]);
 
-    const incomingUsers = incomingIds.length
+    const visibleIncomingIds = incomingIds.filter((id) => !rejectedIds.has(id));
+    const incomingUsers = visibleIncomingIds.length
       ? await Usuario.find({
-          _id: { $in: incomingIds },
+          _id: { $in: visibleIncomingIds },
           confirmEmail: true,
         })
           .select("_id nombre avatar universidad carrera")
@@ -107,6 +156,28 @@ const getPublicProfile = async (req, res) => {
     ]);
 
     if (!user) return res.status(404).json({ msg: "Usuario no encontrado" });
+
+    const viewerId = req.usuario._id?.toString?.() || "";
+    const targetId = user._id?.toString?.() || "";
+    const isSelf = viewerId === targetId;
+    const isAdmin = req.usuario.rol === "administrador";
+    const isFriend = (viewer?.amigos || []).some((id) => id?.toString?.() === targetId);
+    const canSeeFull = user.perfilPublico !== false || isSelf || isAdmin || isFriend;
+
+    if (!canSeeFull) {
+      return res.json({
+        user: {
+          _id: user._id,
+          nombre: user.nombre,
+          avatar: mapAvatarToPublicUrl(req, user).avatar,
+          perfilPublico: false,
+        },
+        isPrivate: true,
+        friendStatus: getFriendStatus(viewer, user._id),
+        posts: [],
+        groups: [],
+      });
+    }
 
     const [posts, groups] = await Promise.all([
       Post.find({ usuario: id, "moderation.status": { $ne: "disabled" } })
@@ -324,8 +395,8 @@ const sendMatchLike = async (req, res) => {
       toUser.matchLikesEnviados = removeId(toUser.matchLikesEnviados || [], meId);
       toUser.matchLikesRecibidos = removeId(toUser.matchLikesRecibidos || [], meId);
 
-      me.matchRechazados = removeId(me.matchRechazados || [], targetId);
-      toUser.matchRechazados = removeId(toUser.matchRechazados || [], meId);
+      me.matchRechazados = removeReject(me.matchRechazados || [], targetId);
+      toUser.matchRechazados = removeReject(toUser.matchRechazados || [], meId);
 
       me.matchNotificaciones = (me.matchNotificaciones || []).filter((item) => {
         if (item.type !== "match_like") return true;
@@ -381,7 +452,7 @@ const sendMatchLike = async (req, res) => {
     if (!hasId(toUser.matchLikesRecibidos || [], meId)) {
       toUser.matchLikesRecibidos = [...(toUser.matchLikesRecibidos || []), me._id];
     }
-    me.matchRechazados = removeId(me.matchRechazados || [], targetId);
+    me.matchRechazados = removeReject(me.matchRechazados || [], targetId);
 
 
     await Promise.all([me.save(), toUser.save()]);
@@ -410,7 +481,7 @@ const rejectMatchCandidate = async (req, res) => {
       return res.status(404).json({ msg: "Usuario no encontrado" });
     }
 
-    me.matchRechazados = pushUniqueId(me.matchRechazados || [], otherUser._id);
+    me.matchRechazados = upsertReject(me.matchRechazados || [], otherUser._id);
     me.matchLikesRecibidos = removeId(me.matchLikesRecibidos || [], otherUser._id);
     me.matchLikesEnviados = removeId(me.matchLikesEnviados || [], otherUser._id);
 
@@ -477,6 +548,35 @@ const getMatchNotifications = async (req, res) => {
   }
 };
 
+const listInvitePeople = async (req, res) => {
+  try {
+    const me = await Usuario.findById(req.usuario._id).select("amigos").lean();
+    const friendIds = (me?.amigos || []).map((id) => id.toString());
+    const friends = friendIds.length
+      ? await Usuario.find({
+          _id: { $in: friendIds },
+          confirmEmail: true,
+        })
+          .select("_id nombre avatar universidad carrera correoInstitucional")
+          .lean()
+      : [];
+
+    const excluded = new Set([req.usuario._id.toString(), ...friendIds]);
+    const others = await Usuario.find({
+      _id: { $nin: [...excluded] },
+      confirmEmail: true,
+    })
+      .select("_id nombre avatar universidad carrera correoInstitucional")
+      .sort({ nombre: 1 })
+      .limit(30)
+      .lean();
+
+    res.json([...friends, ...others].map((user) => mapAvatarToPublicUrl(req, user)));
+  } catch {
+    res.status(500).json({ msg: "Error al listar personas para invitar" });
+  }
+};
+
 export {
   listMatchCandidates,
   searchUsers,
@@ -489,5 +589,6 @@ export {
   sendMatchLike,
   rejectMatchCandidate,
   getMatchNotifications,
+  listInvitePeople,
 };
 

@@ -184,17 +184,25 @@ const UserPublicProfileView = () => {
         />
         <div>
           <h3>{data.user.nombre}</h3>
-          <p>{data.user.descripcion || "Sin descripcion por ahora."}</p>
+          {data.isPrivate ? (
+            <p>Este perfil es privado. Solo se muestra el nombre y la foto.</p>
+          ) : (
+            <p>{data.user.descripcion || "Sin descripcion por ahora."}</p>
+          )}
+          {!data.isPrivate ? (
           <div className="stats__dash">
             <span>{data.user.universidad || "Universidad"}</span>
             <span>{data.user.carrera || "Carrera"}</span>
             <span>{data.user.rol || "estudiante"}</span>
           </div>
+          ) : null}
           {renderFriendActions()}
           {error ? <p className="chat_error__dash">{error}</p> : null}
         </div>
       </section>
 
+      {!data.isPrivate ? (
+        <>
       <section className="panel__dash">
         <h3>Publicaciones</h3>
         <div className="card_grid__dash">
@@ -217,6 +225,8 @@ const UserPublicProfileView = () => {
           {!data.groups?.length ? <li>No pertenece a grupos visibles.</li> : null}
         </ul>
       </section>
+        </>
+      ) : null}
 
       {confirmModal.open ? (
         <div className="confirm_modal_overlay__dash" role="dialog" aria-modal="true">

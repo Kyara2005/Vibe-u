@@ -23,9 +23,11 @@ const PostSchema = new mongoose.Schema({
 
 const GrupoSchema = new mongoose.Schema({
     nombre: { type: String, required: true },
-    imagen: { type: String }, 
+    imagen: { type: String },
+    descripcion: { type: String, default: "" },
     creadorEmail: { type: String, required: true },
-    miembrosArray: { type: [String], default: [] }, 
+    miembrosArray: { type: [String], default: [] },
+    tags: { type: [String], default: [] },
     posts: [PostSchema]
 }, { timestamps: true });
 

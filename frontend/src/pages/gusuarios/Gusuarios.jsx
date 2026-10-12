@@ -155,14 +155,14 @@ export default function Gusuario() {
             ) : (
               usuariosFiltrados.map((usuario) => (
                 <tr key={usuario._id}>
-                  <td className="font-bold">{usuario.nombre}</td>
-                  <td>{usuario.correoInstitucional}</td>
-                  <td>
+                  <td className="font-bold" data-label="Nombre">{usuario.nombre}</td>
+                  <td data-label="Email">{usuario.correoInstitucional}</td>
+                  <td data-label="Rol">
                     <span className={`gestion-badge ${usuario.rol === 'administrador' ? 'admin' : 'usuario'}`}>
                       {usuario.rol}
                     </span>
                   </td>
-                  <td className="actions-cell">
+                  <td className="actions-cell" data-label="Acciones">
                     <button 
                       className={usuario.rol === "administrador" ? "btn-downgrade" : "btn-promote"} 
                       onClick={() => setModal({ show: true, user: usuario, type: "ROL" })}

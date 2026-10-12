@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import storeAuth from "../context/storeAuth";
+import NotificationAlerts from "../components/notifications/NotificationAlerts";
 import { getSessionToken, isTokenExpired } from "../utils/authToken";
 
 const PrivateRoute = () => {
@@ -26,7 +27,12 @@ const PrivateRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <NotificationAlerts />
+      <Outlet />
+    </>
+  );
 };
 
 export default PrivateRoute;
